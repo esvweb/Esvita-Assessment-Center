@@ -1,13 +1,11 @@
-import { isSignedIn } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { addPhoto, deletePhoto } from "@/lib/cases";
 import { errorResponse, HttpError } from "@/lib/session";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
 
-async function requireLogin() {
-  if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
-}
+const requireLogin = () => requirePermission("editContent");
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

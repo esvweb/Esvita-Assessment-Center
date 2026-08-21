@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Assessment } from "@/lib/assessments";
 
-export default function AssessmentList({ initial }: { initial: Assessment[] }) {
+export default function AssessmentList({
+  initial,
+  canDestroy,
+}: {
+  initial: Assessment[];
+  canDestroy: boolean;
+}) {
   const [items, setItems] = useState(initial);
   const [working, setWorking] = useState<string | null>(null);
   const [name, setName] = useState("");

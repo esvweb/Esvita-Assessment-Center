@@ -237,3 +237,38 @@ alter table cases add column if not exists doctor_plan_currency text not null de
 -- senior candidate be tested on what they can carry without a crib sheet — the
 -- patient and the grader still know the real facts, only the candidate doesn't.
 alter table assessments add column if not exists brief_enabled boolean not null default true;
+
+-- ---------------------------------------------------------------------------
+-- Candidates sign in with a code and a password rather than a magic link, so
+-- the credentials can be sent separately and the link cannot be forwarded.
+-- ---------------------------------------------------------------------------
+alter table sessions add column if not exists candidate_code text;
+alter table sessions add column if not exists candidate_password_hash text;
+
+create unique index if not exists sessions_candidate_code_idx
+  on sessions (candidate_code) where candidate_code is not null;
+
+-- ---------------------------------------------------------------------------
+-- Candidates sign in with a single six-character code: five digits identifying
+-- the person, then a letter for which attempt this is (A, B, C…). Re-testing
+-- the same candidate keeps their number and advances the letter.
+-- ---------------------------------------------------------------------------
+alter table sessions drop column if exists candidate_password_hash;
+-- Normalised identity (email when known, else name) used to group attempts.
+alter table sessions add column if not exists candidate_key text;
+
+-- A six-character code is a small secret, so failed attempts are counted and
+-- throttled rather than left open to guessing.
+create table if not exists candidate_login_attempts (
+  id         uuid primary key default gen_random_uuid(),
+  code       text not null,
+  ip         text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists candidate_attempts_code_idx on candidate_login_attempts (code, created_at desc);
+create index if not exists candidate_attempts_ip_idx   on candidate_login_attempts (ip, created_at desc);
+
+-- Roles: superadmin lives only in the environment and is never stored here.
+alter table users drop constraint if exists users_role_check;
+update users set role = 'moderator' where role = 'member';

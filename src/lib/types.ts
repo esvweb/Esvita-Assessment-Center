@@ -40,6 +40,10 @@ export type SessionStatus = "not_started" | "in_progress" | "completed" | "aband
 export interface AssessmentSession {
   id: string;
   token: string;
+  /** The six-character code the candidate types to sign in. */
+  candidate_code: string | null;
+  /** Groups a person's attempts so a re-test keeps their number. */
+  candidate_key: string | null;
   assessment_id: string | null;
   candidate_name: string;
   candidate_email: string | null;

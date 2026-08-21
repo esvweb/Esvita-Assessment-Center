@@ -1,10 +1,9 @@
-import { currentUser, isSignedIn } from "@/lib/auth";
+import { currentUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { listRubricVersions, saveRubric } from "@/lib/rubric";
 import { errorResponse, HttpError } from "@/lib/session";
 
-async function requireLogin() {
-  if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
-}
+const requireLogin = () => requirePermission("editContent");
 
 export async function GET(req: Request) {
   try {

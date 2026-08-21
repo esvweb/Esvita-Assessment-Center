@@ -1,15 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import AssessmentTabs from "@/components/AssessmentTabs";
-import LoginForm from "@/components/LoginForm";
 import RubricManager from "@/components/RubricManager";
 import { getAssessment } from "@/lib/assessments";
-import { adminUsername, isSignedIn } from "@/lib/auth";
+import { isSignedIn } from "@/lib/auth";
 import { listRubricVersions } from "@/lib/rubric";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await isSignedIn())) return <LoginForm adminUser={adminUsername()} />;
+  if (!(await isSignedIn())) redirect("/?as=staff");
   const { id } = await params;
   const assessment = await getAssessment(id);
   if (!assessment) notFound();

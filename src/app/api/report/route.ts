@@ -4,8 +4,8 @@ import { getCase } from "@/lib/cases";
 import { generateReport } from "@/lib/report";
 import { getAssessment } from "@/lib/assessments";
 import { activeRubric, DEFAULT_CRITERIA, DEFAULT_INSTRUCTIONS, saveRubric } from "@/lib/rubric";
+import { requirePermission } from "@/lib/permissions";
 import { assessmentIdFor, errorResponse, requireSession, HttpError } from "@/lib/session";
-import { isSignedIn } from "@/lib/auth";
 
 /**
  * Generates (or regenerates) the HR report for a session.
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     const session = sessionId
       ? await (async () => {
-          if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
+          await requirePermission("runAssessments");
           const s = await getSessionById(sessionId);
           if (!s) throw new HttpError(404, "Session not found");
           return s;

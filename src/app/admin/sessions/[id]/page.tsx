@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import LoginForm from "@/components/LoginForm";
+import { notFound, redirect } from "next/navigation";
 import ReportView from "@/components/ReportView";
 import TranscriptView from "@/components/TranscriptView";
 import { getAssessment } from "@/lib/assessments";
-import { adminUsername, isSignedIn } from "@/lib/auth";
+import { isSignedIn } from "@/lib/auth";
 import { getCase } from "@/lib/cases";
 import { getSessionById, getTranscript, sql } from "@/lib/db";
 import { getCallArtifacts } from "@/lib/vapi";
@@ -12,7 +11,7 @@ import { getCallArtifacts } from "@/lib/vapi";
 export const dynamic = "force-dynamic";
 
 export default async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await isSignedIn())) return <LoginForm adminUser={adminUsername()} />;
+  if (!(await isSignedIn())) redirect("/?as=staff");
 
   const { id } = await params;
   const session = await getSessionById(id);

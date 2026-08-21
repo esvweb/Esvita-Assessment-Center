@@ -15,9 +15,11 @@ const toLines = (v: string) =>
 export default function CaseManager({
   assessmentId,
   initial,
+  canDestroy,
 }: {
   assessmentId: string;
   initial: PatientCase[];
+  canDestroy: boolean;
 }) {
   const [cases, setCases] = useState(initial);
   const [openId, setOpenId] = useState<number | null>(null);
@@ -73,6 +75,7 @@ export default function CaseManager({
             onToggle={() => setOpenId(openId === c.id ? null : c.id)}
             onSaved={refresh}
             onNotice={setNotice}
+            canDestroy={canDestroy}
           />
         ))}
         {cases.length === 0 && (
@@ -91,12 +94,14 @@ function CaseRow({
   onToggle,
   onSaved,
   onNotice,
+  canDestroy,
 }: {
   data: PatientCase;
   open: boolean;
   onToggle: () => void;
   onSaved: () => Promise<void>;
   onNotice: (m: string | null) => void;
+  canDestroy: boolean;
 }) {
   const [form, setForm] = useState({
     name: data.name,
@@ -443,9 +448,15 @@ function CaseRow({
               {saving ? "Saving…" : "Save"}
             </button>
             {saved && <span className="text-sm text-brand">Saved</span>}
-            <button onClick={() => void remove()} className="ml-auto text-sm font-medium text-red-700">
-              Delete case
-            </button>
+            {canDestroy && (
+              <button
+                type="button"
+                onClick={() => void remove()}
+                className="ml-auto text-sm font-medium text-red-700"
+              >
+                Delete case
+              </button>
+            )}
           </div>
         </div>
       )}

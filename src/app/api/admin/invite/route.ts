@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
-import { isSignedIn } from "@/lib/auth";
+import { candidateKey, issueCandidateCode } from "@/lib/candidate-auth";
+import { requirePermission } from "@/lib/permissions";
 import { sql } from "@/lib/db";
 import { defaultAssessment, getAssessment } from "@/lib/assessments";
 import { getCase, listCases, pickCaseId } from "@/lib/cases";
@@ -8,7 +9,7 @@ import { errorResponse, HttpError } from "@/lib/session";
 /** Creates a candidate invitation and returns the link to send them. */
 export async function POST(req: Request) {
   try {
-    if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
+    await requirePermission("runAssessments");
 
     const { candidate_name, candidate_email, profile_id, assessment_id } =
       (await req.json()) as {
@@ -46,16 +47,24 @@ export async function POST(req: Request) {
 
     const token = randomBytes(24).toString("base64url");
 
+    // One code is the whole credential. Re-testing the same person keeps their
+    // number and advances the attempt letter.
+    const key = candidateKey(candidate_name, candidate_email);
+    const candidateCode = await issueCandidateCode(key);
+
     // With the briefing switched off there is nothing to read first, so the
     // session opens straight on the outbound call.
     const startStage = assessment.briefEnabled ? "brief" : "call_1";
 
     const inserted = await db`
       insert into sessions (
-        token, assessment_id, candidate_name, candidate_email, profile_id, stage, max_stage
+        token, candidate_code, candidate_key,
+        assessment_id, candidate_name, candidate_email, profile_id, stage, max_stage
       )
       values (
         ${token},
+        ${candidateCode},
+        ${key},
         ${assessment.id},
         ${candidate_name.trim()},
         ${candidate_email?.trim() || null},
@@ -66,7 +75,15 @@ export async function POST(req: Request) {
       returning *`;
 
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    return Response.json({ session: inserted[0], link: `${base}/a/${token}` });
+    return Response.json({
+      session: inserted[0],
+      link: `${base}/a/${token}`,
+      credentials: {
+        code: candidateCode,
+        url: base || "/",
+        attempt: candidateCode.slice(5),
+      },
+    });
   } catch (err) {
     return errorResponse(err);
   }

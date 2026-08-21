@@ -1,34 +1,27 @@
-import { adminUsername } from "@/lib/auth";
 import { isDatabaseReady } from "@/lib/config";
-import { mailConfigured, sendLoginCode } from "@/lib/mailer";
+import { sendLoginCode } from "@/lib/mailer";
 import { OtpError, issueCode } from "@/lib/otp";
 import { errorResponse, HttpError } from "@/lib/session";
-import { findUserByUsername } from "@/lib/users";
+import { findUserByEmail } from "@/lib/users";
 
 /** Emails a one-time login code to the address registered for this username. */
 export async function POST(req: Request) {
   try {
-    const { username } = (await req.json()) as { username?: string };
-    const name = username?.trim();
-    if (!name) throw new HttpError(400, "A username is required");
-
-    if (name.toLowerCase() === adminUsername().toLowerCase()) {
-      throw new HttpError(400, "The admin account does not use codes — sign in with its password.");
-    }
+    const { email } = (await req.json()) as { email?: string };
+    const address = email?.trim();
+    if (!address) throw new HttpError(400, "An email address is required");
     if (!isDatabaseReady()) {
       throw new HttpError(503, "User sign-in requires a database connection.");
     }
 
-    const user = await findUserByUsername(name);
+    const user = await findUserByEmail(address);
 
-    // A configured mail provider means this is live: stay vague so the endpoint
-    // cannot be used to enumerate accounts. Before that, during setup, say
-    // plainly that the username is unknown — otherwise a typo looks like a
-    // silent failure.
-    const live = mailConfigured();
+    // Told plainly rather than vaguely. This does let someone test whether an
+    // address is registered, which is an accepted trade: the panel serves a
+    // handful of named colleagues, and a silent non-answer sends people hunting
+    // through spam folders for a code that was never sent.
     if (!user || !user.is_active) {
-      if (live) return Response.json({ ok: true, sent: true, fallbackToLog: false });
-      throw new HttpError(404, `No active user named "${name}".`);
+      throw new HttpError(403, "unauthorised");
     }
 
     let code: string;

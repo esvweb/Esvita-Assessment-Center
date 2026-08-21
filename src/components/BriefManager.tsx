@@ -10,9 +10,11 @@ const label = "block text-xs font-medium tracking-wide text-muted uppercase mb-1
 export default function BriefManager({
   assessmentId,
   initial,
+  canDestroy,
 }: {
   assessmentId: string;
   initial: BriefSection[];
+  canDestroy: boolean;
 }) {
   const [sections, setSections] = useState(initial);
 
@@ -50,7 +52,7 @@ export default function BriefManager({
 
       <div className="space-y-3">
         {sections.map((s) => (
-          <SectionRow key={s.id} data={s} onChanged={refresh} />
+          <SectionRow key={s.id} data={s} onChanged={refresh} canDestroy={canDestroy} />
         ))}
         {sections.length === 0 && (
           <p className="rounded-xl border border-line bg-white px-5 py-8 text-center text-sm text-muted">
@@ -62,7 +64,15 @@ export default function BriefManager({
   );
 }
 
-function SectionRow({ data, onChanged }: { data: BriefSection; onChanged: () => Promise<void> }) {
+function SectionRow({
+  data,
+  onChanged,
+  canDestroy,
+}: {
+  data: BriefSection;
+  onChanged: () => Promise<void>;
+  canDestroy: boolean;
+}) {
   const [title, setTitle] = useState(data.title);
   const [body, setBody] = useState(data.body);
   const [bullets, setBullets] = useState(data.bullets.join("\n"));
@@ -128,9 +138,15 @@ function SectionRow({ data, onChanged }: { data: BriefSection; onChanged: () => 
               {saving ? "Saving…" : "Save"}
             </button>
             {saved && <span className="text-sm text-brand">Saved</span>}
-            <button onClick={() => void remove()} className="ml-auto text-sm font-medium text-red-700">
-              Delete section
-            </button>
+            {canDestroy && (
+              <button
+                type="button"
+                onClick={() => void remove()}
+                className="ml-auto text-sm font-medium text-red-700"
+              >
+                Delete section
+              </button>
+            )}
           </div>
         </div>
       )}

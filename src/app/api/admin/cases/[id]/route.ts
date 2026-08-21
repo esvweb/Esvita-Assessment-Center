@@ -1,11 +1,9 @@
-import { isSignedIn } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { deleteCase, getCase, updateCase } from "@/lib/cases";
 import { sql } from "@/lib/db";
 import { errorResponse, HttpError } from "@/lib/session";
 
-async function requireLogin() {
-  if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
-}
+const requireLogin = () => requirePermission("editContent");
 
 function parseId(raw: string): number {
   const id = Number(raw);
@@ -37,7 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireLogin();
+    await requirePermission("destroy");
     const id = parseId((await params).id);
 
     // Sessions reference the case they were run against, and their reports quote

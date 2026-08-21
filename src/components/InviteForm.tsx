@@ -14,7 +14,12 @@ export default function InviteForm({ assessments }: { assessments: AssessmentOpt
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [profileId, setProfileId] = useState<string>("auto");
-  const [link, setLink] = useState<string | null>(null);
+  const [issued, setIssued] = useState<{
+    code: string;
+    attempt: string;
+    url: string;
+    name: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -22,7 +27,7 @@ export default function InviteForm({ assessments }: { assessments: AssessmentOpt
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setLink(null);
+    setIssued(null);
     try {
       const res = await fetch("/api/admin/invite", {
         method: "POST",
@@ -36,7 +41,12 @@ export default function InviteForm({ assessments }: { assessments: AssessmentOpt
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create the invitation");
-      setLink(data.link);
+      setIssued({
+        code: data.credentials.code,
+        attempt: data.credentials.attempt,
+        url: data.credentials.url || window.location.origin,
+        name: data.session.candidate_name,
+      });
       setName("");
       setEmail("");
     } catch (err) {
@@ -93,10 +103,32 @@ export default function InviteForm({ assessments }: { assessments: AssessmentOpt
         </select>
       </div>
       {error && <p className="text-sm text-red-700">{error}</p>}
-      {link && (
-        <div className="rounded-lg border border-line bg-surface px-3 py-2">
-          <p className="text-xs text-muted">Send this link to the candidate:</p>
-          <code className="text-sm break-all">{link}</code>
+      {issued && (
+        <div className="rounded-lg border border-brand/30 bg-brand/[.04] p-4">
+          <p className="text-sm font-medium">
+            Code for {issued.name}
+            {issued.attempt !== "A" && (
+              <span className="ml-2 text-xs font-normal text-muted">
+                attempt {issued.attempt} — same candidate, new session
+              </span>
+            )}
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            This is the whole credential. Send it with the address below.
+          </p>
+          <p className="mt-3 font-mono text-2xl font-semibold tracking-[.3em]">{issued.code}</p>
+          <p className="mt-2 font-mono text-sm break-all text-muted">{issued.url}</p>
+          <button
+            type="button"
+            onClick={() =>
+              navigator.clipboard.writeText(
+                `Esvita Assessment Center\n${issued.url}\n\nYour access code: ${issued.code}`,
+              )
+            }
+            className="mt-3 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium"
+          >
+            Copy
+          </button>
         </div>
       )}
       <button

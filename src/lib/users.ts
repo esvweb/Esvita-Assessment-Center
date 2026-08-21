@@ -18,6 +18,13 @@ export async function findUserByUsername(username: string): Promise<HrUser | nul
   return (rows[0] as HrUser) ?? null;
 }
 
+export async function findUserByEmail(email: string): Promise<HrUser | null> {
+  const db = sql();
+  const rows = await db`
+    select * from users where lower(email) = lower(${email.trim()}) limit 1`;
+  return (rows[0] as HrUser) ?? null;
+}
+
 export async function listUsers(): Promise<HrUser[]> {
   const db = sql();
   return (await db`select * from users order by created_at asc`) as HrUser[];
@@ -31,9 +38,25 @@ export async function createUser(input: {
   const db = sql();
   const rows = await db`
     insert into users (username, email, role)
-    values (${input.username.trim()}, ${input.email.trim().toLowerCase()}, ${input.role ?? "member"})
+    values (${input.username.trim()}, ${input.email.trim().toLowerCase()}, ${input.role ?? "moderator"})
     returning *`;
   return rows[0] as HrUser;
+}
+
+/** Renames a user, changes their address or their role. */
+export async function updateUser(
+  id: string,
+  input: { username?: string; email?: string; role?: Role },
+): Promise<HrUser | null> {
+  const db = sql();
+  const rows = await db`
+    update users set
+      username = coalesce(${input.username?.trim() ?? null}, username),
+      email    = coalesce(${input.email?.trim().toLowerCase() ?? null}, email),
+      role     = coalesce(${input.role ?? null}, role)
+    where id = ${id}
+    returning *`;
+  return (rows[0] as HrUser) ?? null;
 }
 
 export async function setUserActive(id: string, active: boolean): Promise<void> {

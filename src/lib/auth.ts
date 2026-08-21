@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import type { Role } from "./roles";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 /**
@@ -10,7 +11,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 export const AUTH_COOKIE = "esvita_session";
 const MAX_AGE_SECONDS = 60 * 60 * 12;
 
-export type Role = "admin" | "member";
+export type { Role } from "./roles";
 
 export interface SessionPayload {
   username: string;
@@ -60,7 +61,7 @@ export function verifySession(token: string | undefined): SessionPayload | null 
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString()) as SessionPayload;
     if (!payload.exp || payload.exp < Date.now()) return null;
-    if (payload.role !== "admin" && payload.role !== "member") return null;
+    if (!["superadmin", "admin", "moderator"].includes(payload.role)) return null;
     return payload;
   } catch {
     return null;
@@ -80,8 +81,10 @@ export async function isSignedIn(): Promise<boolean> {
   return (await currentUser()) !== null;
 }
 
+/** Admin-or-above: everything an administrator can do, plus the hidden account. */
 export async function isAdmin(): Promise<boolean> {
-  return (await currentUser())?.role === "admin";
+  const role = (await currentUser())?.role;
+  return role === "admin" || role === "superadmin";
 }
 
 export function sessionCookieHeader(token: string): string {

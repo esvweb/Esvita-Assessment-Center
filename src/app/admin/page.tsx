@@ -1,10 +1,11 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import InviteForm from "@/components/InviteForm";
-import LoginForm from "@/components/LoginForm";
 import SetupChecklist from "@/components/SetupChecklist";
 import SignOut from "@/components/SignOut";
 import UserManager from "@/components/UserManager";
-import { adminUsername, currentUser } from "@/lib/auth";
+import { currentUser } from "@/lib/auth";
+import { permissionsFor, ROLE_LABELS } from "@/lib/roles";
 import { isDatabaseReady, serviceStatus } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { listAssessments } from "@/lib/assessments";
@@ -26,7 +27,7 @@ const STAGE_LABEL: Record<string, string> = {
 
 export default async function AdminPage() {
   const me = await currentUser();
-  if (!me) return <LoginForm adminUser={adminUsername()} />;
+  if (!me) redirect("/?as=staff");
 
   const services = serviceStatus();
 
@@ -37,7 +38,7 @@ export default async function AdminPage() {
       <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
         <div className="flex items-baseline justify-between">
           <h1 className="text-2xl font-semibold">Candidate assessments</h1>
-          <SignOut username={me.username} />
+          <SignOut username={`${me.username} · ${ROLE_LABELS[me.role]}`} />
         </div>
         <SetupChecklist services={services} />
       </main>
@@ -91,7 +92,7 @@ export default async function AdminPage() {
           <h1 className="text-2xl font-semibold">Candidate assessments</h1>
           <p className="text-sm text-muted">{sessions.length} sessions</p>
         </div>
-        <SignOut username={me.username} />
+        <SignOut username={`${me.username} · ${ROLE_LABELS[me.role]}`} />
       </div>
 
       <nav className="flex flex-wrap gap-2">
@@ -114,7 +115,7 @@ export default async function AdminPage() {
 
       {services.some((s) => !s.ready) && <SetupChecklist services={services} />}
 
-      {me.role === "admin" && <UserManager initial={await listUsers()} />}
+      {permissionsFor(me.role).manageUsers && <UserManager initial={await listUsers()} />}
 
       <InviteForm assessments={casesByAssessment} />
 

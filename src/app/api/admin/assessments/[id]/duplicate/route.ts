@@ -1,11 +1,11 @@
-import { isSignedIn } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { duplicateAssessment, getAssessment } from "@/lib/assessments";
 import { errorResponse, HttpError } from "@/lib/session";
 
 /** Copies an assessment's content so a variant can start from a working base. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
+    await requirePermission("editContent");
 
     const { id } = await params;
     const source = await getAssessment(id);

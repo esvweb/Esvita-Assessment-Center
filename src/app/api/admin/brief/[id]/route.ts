@@ -1,10 +1,8 @@
-import { isSignedIn } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { deleteSection, updateSection } from "@/lib/brief";
 import { errorResponse, HttpError } from "@/lib/session";
 
-async function requireLogin() {
-  if (!(await isSignedIn())) throw new HttpError(401, "You need to sign in");
-}
+const requireLogin = () => requirePermission("editContent");
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireLogin();
+    await requirePermission("destroy");
     await deleteSection((await params).id);
     return Response.json({ ok: true });
   } catch (err) {
