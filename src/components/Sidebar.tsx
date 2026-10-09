@@ -73,6 +73,7 @@ export default function Sidebar({
                   {plan.items.map((i, k) => (
                     <li key={k}>
                       • {i.treatment} × {i.quantity}
+                      {i.unit_price ? ` — ${i.unit_price} ${plan.currency} each` : ""}
                       {i.note ? ` — ${i.note}` : ""}
                     </li>
                   ))}

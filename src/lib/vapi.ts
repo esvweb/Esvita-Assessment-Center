@@ -25,6 +25,13 @@ function isTransient(status: number | null): boolean {
 const MAX_ATTEMPTS = 3;
 
 /**
+ * How long the patient waits through silence before speaking. Vapi caps this
+ * at 5 seconds, which is what the assessment wants: never interrupt, and never
+ * fill a pause the candidate is supposed to be filling.
+ */
+const SILENCE_BEFORE_REPLY_SECONDS = 5;
+
+/**
  * A dropped connection here lands in front of a candidate mid-assessment, so a
  * blip must not end their session. Network failures and 5xx/429 responses are
  * retried with backoff; a 4xx is a real error and fails immediately.
@@ -112,6 +119,22 @@ export function buildAssistantConfig(args: CreateCallAssistantArgs): Record<stri
     firstMessageMode: callNumber === 1 ? "assistant-speaks-first" : "assistant-waits-for-user",
     maxDurationSeconds: callNumber === 1 ? 900 : 1500,
     silenceTimeoutSeconds: 30,
+    // Candidates think out loud and pause mid-sentence. Vapi's default is to
+    // answer after 0.4s of quiet, which on a sales call reads as talking over
+    // someone — and it made the patient unassessable. The assistant now sits
+    // through a long pause before taking a turn, and yields the floor the
+    // instant the candidate starts speaking again.
+    startSpeakingPlan: {
+      waitSeconds: SILENCE_BEFORE_REPLY_SECONDS,
+      // Smart endpointing deliberately omitted: it second-guesses the pause
+      // lengths below to shave latency, which is the behaviour being removed.
+      transcriptionEndpointingPlan: {
+        onPunctuationSeconds: 1.5,
+        onNoPunctuationSeconds: 3,
+        onNumberSeconds: 2,
+      },
+    },
+    stopSpeakingPlan: { numWords: 0, voiceSeconds: 0.2, backoffSeconds: 2 },
     backgroundSound: "off",
     // HR listens back to tone and pacing, which the transcript cannot carry.
     // Candidates are told the call is recorded before they accept it.

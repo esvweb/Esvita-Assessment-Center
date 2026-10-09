@@ -272,3 +272,46 @@ create index if not exists candidate_attempts_ip_idx   on candidate_login_attemp
 -- Roles: superadmin lives only in the environment and is never stored here.
 alter table users drop constraint if exists users_role_check;
 update users set role = 'moderator' where role = 'member';
+
+-- ---------------------------------------------------------------------------
+-- Agent prompt, question banks and pricing move out of code (2026-09-23)
+--
+-- Everything the patient is told now lives here, so the panel can change how
+-- the agent behaves without a deploy. A missing row means "use the built-in
+-- default", which keeps existing assessments working and makes an edit
+-- reversible by deleting the row.
+-- ---------------------------------------------------------------------------
+
+create table if not exists prompt_blocks (
+  assessment_id uuid not null references assessments(id) on delete cascade,
+  key           text not null,
+  body          text not null,
+  updated_at    timestamptz not null default now(),
+  primary key (assessment_id, key)
+);
+
+create table if not exists question_banks (
+  assessment_id uuid not null references assessments(id) on delete cascade,
+  key           text not null,
+  title         text not null default '',
+  questions     text[] not null default '{}',
+  sort_order    int not null default 99,
+  updated_at    timestamptz not null default now(),
+  primary key (assessment_id, key)
+);
+
+-- The priced catalogue the candidate quotes from. min_price is the floor the
+-- plan endpoint enforces; candidates may quote above it and are scored on it.
+create table if not exists treatments (
+  id            uuid primary key default gen_random_uuid(),
+  assessment_id uuid not null references assessments(id) on delete cascade,
+  name          text not null,
+  min_price     numeric(10,2) not null default 0,
+  currency      text not null default 'EUR',
+  unit          text not null default 'unit',
+  is_active     boolean not null default true,
+  sort_order    int not null default 0,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists treatments_assessment_idx on treatments (assessment_id, sort_order);

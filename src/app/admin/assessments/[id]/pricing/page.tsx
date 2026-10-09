@@ -1,11 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import AssessmentTabs from "@/components/AssessmentTabs";
-import CaseManager from "@/components/CaseManager";
+import PricingManager from "@/components/PricingManager";
 import { getAssessment } from "@/lib/assessments";
 import { isSignedIn } from "@/lib/auth";
-import { loadBanks, loadObjections } from "@/lib/banks";
-import { listCases } from "@/lib/cases";
 import { myPermissions } from "@/lib/permissions";
+import { listTreatments } from "@/lib/treatments";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +16,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-6 py-10">
-      <AssessmentTabs assessmentId={id} assessmentName={assessment.name} active="cases" />
-      <CaseManager
+      <AssessmentTabs assessmentId={id} assessmentName={assessment.name} active="pricing" />
+      <PricingManager
         assessmentId={id}
-        initial={await listCases(id, true)}
-        banks={await loadBanks(id)}
-        objections={await loadObjections(id)}
-        canDestroy={(await myPermissions())?.destroy ?? false}
+        initial={await listTreatments(id, true)}
+        canDelete={(await myPermissions())?.destroy ?? false}
       />
     </main>
   );

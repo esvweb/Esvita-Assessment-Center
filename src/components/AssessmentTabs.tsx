@@ -7,11 +7,13 @@ export default function AssessmentTabs({
 }: {
   assessmentId: string;
   assessmentName: string;
-  active: "cases" | "brief" | "rubric";
+  active: "cases" | "brief" | "pricing" | "prompt" | "rubric";
 }) {
   const tabs = [
     { key: "cases", label: "Cases", href: `/admin/assessments/${assessmentId}/cases` },
     { key: "brief", label: "Company info", href: `/admin/assessments/${assessmentId}/brief` },
+    { key: "pricing", label: "Pricing", href: `/admin/assessments/${assessmentId}/pricing` },
+    { key: "prompt", label: "Agent prompt", href: `/admin/assessments/${assessmentId}/prompt` },
     { key: "rubric", label: "Grading criteria", href: `/admin/assessments/${assessmentId}/rubric` },
   ] as const;
 

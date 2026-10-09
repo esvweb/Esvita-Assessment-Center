@@ -1,6 +1,8 @@
+import { loadBanks, loadObjections } from "@/lib/banks";
 import { listBrief } from "@/lib/brief";
 import { getTranscript, setCallId } from "@/lib/db";
 import { buildPatientPrompt } from "@/lib/prompt";
+import { loadBlocks } from "@/lib/prompt-blocks";
 import { assessmentIdFor, errorResponse, patientFor, requireSession, HttpError } from "@/lib/session";
 import { createCallAssistant, deleteAssistant } from "@/lib/vapi";
 
@@ -25,15 +27,21 @@ export async function POST(req: Request) {
     }
 
     const assessmentId = await assessmentIdFor(session);
-    const [patient, brief, history] = await Promise.all([
+    const [patient, brief, history, blocks, banks, objections] = await Promise.all([
       patientFor(session),
       listBrief(assessmentId),
       getTranscript(session.id),
+      loadBlocks(assessmentId),
+      loadBanks(assessmentId),
+      loadObjections(assessmentId),
     ]);
 
     const systemPrompt = buildPatientPrompt({
       patient,
       brief,
+      blocks,
+      banks,
+      objections,
       stage: expected,
       history,
       plan: session.plan,

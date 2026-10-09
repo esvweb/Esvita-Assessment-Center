@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PatientCase } from "@/lib/cases";
-import { OBJECTION_BANK, TECHNICAL_BANKS, type TechnicalBank } from "@/lib/personas";
+import { objectionMap, type QuestionBank } from "@/lib/bank-types";
+import type { TechnicalBank } from "@/lib/personas";
 
 const input =
   "w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand";
@@ -15,10 +16,15 @@ const toLines = (v: string) =>
 export default function CaseManager({
   assessmentId,
   initial,
+  banks,
+  objections,
   canDestroy,
 }: {
   assessmentId: string;
   initial: PatientCase[];
+  /** Live banks, so the pickers follow whatever Agent prompt now says. */
+  banks: QuestionBank[];
+  objections: QuestionBank;
   canDestroy: boolean;
 }) {
   const [cases, setCases] = useState(initial);
@@ -74,6 +80,8 @@ export default function CaseManager({
             open={openId === c.id}
             onToggle={() => setOpenId(openId === c.id ? null : c.id)}
             onSaved={refresh}
+            banks={banks}
+            objections={objections}
             onNotice={setNotice}
             canDestroy={canDestroy}
           />
@@ -94,6 +102,8 @@ function CaseRow({
   onToggle,
   onSaved,
   onNotice,
+  banks,
+  objections,
   canDestroy,
 }: {
   data: PatientCase;
@@ -101,8 +111,11 @@ function CaseRow({
   onToggle: () => void;
   onSaved: () => Promise<void>;
   onNotice: (m: string | null) => void;
+  banks: QuestionBank[];
+  objections: QuestionBank;
   canDestroy: boolean;
 }) {
+  const objectionText = objectionMap(objections);
   const [form, setForm] = useState({
     name: data.name,
     age: data.age ?? "",
@@ -338,7 +351,7 @@ function CaseRow({
           <div>
             <label className={label}>Objection chain — delivered in this order</label>
             <div className="grid grid-cols-3 gap-x-4 gap-y-1.5 rounded-lg border border-line p-3">
-              {Object.entries(OBJECTION_BANK).map(([key, text]) => {
+              {Object.entries(objectionText).map(([key, text]) => {
                 const idx = form.objectionChain.indexOf(key);
                 return (
                   <label key={key} className="flex cursor-pointer items-start gap-2 text-sm">
@@ -368,22 +381,22 @@ function CaseRow({
           <div>
             <label className={label}>Technical question banks</label>
             <div className="flex gap-4">
-              {(Object.keys(TECHNICAL_BANKS) as TechnicalBank[]).map((b) => (
+              {banks.map(({ key: b, title }) => (
                 <label key={b} className="flex cursor-pointer items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={form.technicalBanks.includes(b)}
+                    checked={form.technicalBanks.includes(b as TechnicalBank)}
                     onChange={(e) =>
                       set(
                         "technicalBanks",
                         e.target.checked
-                          ? [...form.technicalBanks, b]
+                          ? [...form.technicalBanks, b as TechnicalBank]
                           : form.technicalBanks.filter((x) => x !== b),
                       )
                     }
                     className="h-3.5 w-3.5 accent-[var(--color-brand)]"
                   />
-                  {b} — {TECHNICAL_BANKS[b].title}
+                  {b} — {title}
                 </label>
               ))}
             </div>
@@ -437,6 +450,8 @@ function CaseRow({
             </div>
           </div>
 
+          <FullPrompt caseId={data.id} />
+
           {error && <p className="text-sm text-red-700">{error}</p>}
 
           <div className="flex items-center gap-3">
@@ -461,5 +476,99 @@ function CaseRow({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The literal text this case's agent is given, assembled by the same builder
+ * the live session uses. It is here so that tuning a case never means guessing
+ * what the model actually sees — if the patient behaves oddly, the cause is on
+ * this screen.
+ */
+function FullPrompt({ caseId }: { caseId: number }) {
+  const [stage, setStage] = useState<"call_1" | "chat" | "call_2">("call_1");
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(
+    async (next: typeof stage) => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/admin/prompt/preview?case=${caseId}&stage=${next}`);
+        const d = await res.json();
+        setPrompt(res.ok ? d.prompt : (d.error ?? "Could not build the prompt"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [caseId],
+  );
+
+  useEffect(() => {
+    if (open) void load(stage);
+  }, [open, stage, load]);
+
+  const STAGES = [
+    ["call_1", "Call 1"],
+    ["chat", "Messaging"],
+    ["call_2", "Call 2"],
+  ] as const;
+
+  return (
+    <div className="rounded-lg border border-line bg-surface p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h4 className="text-sm font-semibold">Full agent prompt</h4>
+          <p className="mt-0.5 text-sm text-muted">
+            Exactly what the patient is told for this case. Shared wording is edited under Agent
+            prompt; everything else comes from the fields above.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="shrink-0 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium"
+        >
+          {open ? "Hide" : "Show"}
+        </button>
+      </div>
+
+      {open && (
+        <>
+          <div className="mt-3 flex items-center gap-1">
+            {STAGES.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStage(key)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  stage === key ? "bg-brand text-white" : "border border-line bg-white text-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={!prompt}
+              onClick={() => {
+                if (!prompt) return;
+                void navigator.clipboard.writeText(prompt);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className="ml-auto text-sm font-medium text-brand disabled:opacity-40"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <pre className="mt-2 max-h-[28rem] overflow-auto rounded-lg border border-line bg-white p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+            {loading ? "Building…" : prompt}
+          </pre>
+        </>
+      )}
+    </div>
   );
 }

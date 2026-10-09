@@ -1,8 +1,10 @@
 import type OpenAI from "openai";
+import { loadBanks, loadObjections } from "@/lib/banks";
 import { listBrief } from "@/lib/brief";
 import { appendTranscript, getTranscript, markPhotosRequested } from "@/lib/db";
 import { CHAT_MODEL, openai } from "@/lib/openai";
 import { buildPatientPrompt } from "@/lib/prompt";
+import { loadBlocks } from "@/lib/prompt-blocks";
 import { assessmentIdFor, errorResponse, patientFor, requireSession, HttpError } from "@/lib/session";
 
 /**
@@ -47,10 +49,13 @@ export async function POST(req: Request) {
     }
 
     const assessmentId = await assessmentIdFor(session);
-    const [patient, brief, history] = await Promise.all([
+    const [patient, brief, history, blocks, banks, objections] = await Promise.all([
       patientFor(session),
       listBrief(assessmentId),
       getTranscript(session.id),
+      loadBlocks(assessmentId),
+      loadBanks(assessmentId),
+      loadObjections(assessmentId),
     ]);
 
     // Everything before the chat stage becomes narrative context in the system
@@ -61,6 +66,9 @@ export async function POST(req: Request) {
     const system = buildPatientPrompt({
       patient,
       brief,
+      blocks,
+      banks,
+      objections,
       stage: "chat",
       history: priorContext,
       plan: session.plan,

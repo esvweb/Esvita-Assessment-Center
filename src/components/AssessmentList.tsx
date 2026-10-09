@@ -147,6 +147,18 @@ export default function AssessmentList({
                   Company info
                 </Link>
                 <Link
+                  href={`/admin/assessments/${a.id}/pricing`}
+                  className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-brand"
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href={`/admin/assessments/${a.id}/prompt`}
+                  className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-brand"
+                >
+                  Agent prompt
+                </Link>
+                <Link
                   href={`/admin/assessments/${a.id}/rubric`}
                   className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-brand"
                 >

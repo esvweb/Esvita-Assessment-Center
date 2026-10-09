@@ -33,6 +33,18 @@ export default function Chat({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gotPhotos, setGotPhotos] = useState(initial.some((m) => m.attachments?.length));
+  // Patients send x-rays and intraoral shots; a 96px thumbnail is not something
+  // a candidate can actually read a case from.
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -126,13 +138,22 @@ export default function Chat({
                 {!!m.attachments?.length && (
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     {m.attachments.map((src, j) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <button
                         key={src}
-                        src={src}
-                        alt={m.captions?.[j] ?? "Patient photo"}
-                        className="h-24 w-full rounded-lg border border-line bg-white object-cover"
-                      />
+                        type="button"
+                        onClick={() =>
+                          setLightbox({ src, alt: m.captions?.[j] ?? "Patient photo" })
+                        }
+                        className="group relative block cursor-zoom-in"
+                        aria-label="Open this photo full size"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={m.captions?.[j] ?? "Patient photo"}
+                          className="h-24 w-full rounded-lg border border-line bg-white object-cover transition group-hover:brightness-90"
+                        />
+                      </button>
                     ))}
                   </div>
                 )}
@@ -181,6 +202,32 @@ export default function Chat({
           Prepare the plan →
         </button>
       </div>
+
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightbox.alt}
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-50 flex cursor-zoom-out flex-col items-center justify-center bg-black/80 p-6"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox.src}
+            alt={lightbox.alt}
+            className="max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl"
+          />
+          <p className="mt-3 text-sm text-white/80">{lightbox.alt}</p>
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-5 text-3xl leading-none text-white/70 hover:text-white"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

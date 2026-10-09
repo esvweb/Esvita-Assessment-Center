@@ -8,6 +8,7 @@ import PlanForm from "./PlanForm";
 import Sidebar from "./Sidebar";
 import VoiceCall from "./VoiceCall";
 import type { BriefSection } from "@/lib/brief";
+import type { Treatment } from "@/lib/treatments";
 import type { DoctorIndication } from "./PlanForm";
 import { STAGE_ORDER, type Stage, type TreatmentPlan } from "@/lib/types";
 
@@ -39,6 +40,7 @@ interface Props {
   briefEnabled: boolean;
   plan: TreatmentPlan | null;
   doctor?: DoctorIndication;
+  treatments: Treatment[];
   preview?: boolean;
   previewPhotos?: { url: string; caption: string }[];
 }
@@ -54,6 +56,7 @@ export default function Flow({
   briefEnabled,
   plan: initialPlan,
   doctor,
+  treatments,
   preview = false,
   previewPhotos = [],
 }: Props) {
@@ -149,6 +152,7 @@ export default function Flow({
 
       {stage === "plan" && (
         <PlanForm
+          treatments={treatments}
           token={token}
           patientName={patientName}
           doctor={doctor}

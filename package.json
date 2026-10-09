@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:verify": "node db/verify.mjs",
     "db:seed": "tsx --env-file=.env.local db/seed.mts",
-    "verify": "NEXT_DIST_DIR=.next-verify next build"
+    "verify": "NEXT_DIST_DIR=.next-verify next build",
+    "db:seed-treatments": "node --env-file=.env.local db/seed-treatments.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

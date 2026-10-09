@@ -181,5 +181,24 @@ export async function duplicateAssessment(
     from rubric_versions where assessment_id = ${sourceId}
     order by version desc limit 1`;
 
+  // The price list comes along, otherwise the copy has nothing for a candidate
+  // to quote from and the plan stage is unusable until someone notices.
+  await db`
+    insert into treatments (assessment_id, name, min_price, currency, unit, is_active, sort_order)
+    select ${copy.id}, name, min_price, currency, unit, is_active, sort_order
+    from treatments where assessment_id = ${sourceId}`;
+
+  // Only blocks and banks the source actually overrode exist as rows; the rest
+  // keep falling back to the built-in defaults, which is what the copy wants.
+  await db`
+    insert into prompt_blocks (assessment_id, key, body)
+    select ${copy.id}, key, body
+    from prompt_blocks where assessment_id = ${sourceId}`;
+
+  await db`
+    insert into question_banks (assessment_id, key, title, questions, sort_order)
+    select ${copy.id}, key, title, questions, sort_order
+    from question_banks where assessment_id = ${sourceId}`;
+
   return getAssessment(copy.id);
 }

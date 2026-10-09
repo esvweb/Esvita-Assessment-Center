@@ -2,6 +2,7 @@ import Link from "next/link";
 import Flow from "@/components/Flow";
 import { defaultAssessment } from "@/lib/assessments";
 import { listBrief } from "@/lib/brief";
+import { listTreatments } from "@/lib/treatments";
 import { listCases } from "@/lib/cases";
 import { isDatabaseReady } from "@/lib/config";
 
@@ -24,6 +25,7 @@ export default async function PreviewPage({
   const assessment = isDatabaseReady() ? await defaultAssessment() : null;
   const cases = assessment ? await listCases(assessment.id, true) : [];
   const brief = assessment ? await listBrief(assessment.id) : [];
+  const treatments = assessment ? await listTreatments(assessment.id) : [];
   const patient = cases.find((c) => String(c.id) === raw) ?? cases[0];
 
   if (!patient) {
@@ -71,6 +73,7 @@ export default async function PreviewPage({
         brief={assessment?.briefEnabled ? brief : []}
         briefEnabled={assessment?.briefEnabled ?? true}
         plan={null}
+        treatments={treatments}
         doctor={{
           text: patient.doctorIndication,
           value: patient.doctorPlanValue,

@@ -23,9 +23,20 @@ export interface TranscriptEntry {
   seq?: number;
 }
 
+export interface TreatmentPlanItem {
+  treatment: string;
+  quantity: string;
+  /** What the candidate quoted per unit. Never below `min_price`. */
+  unit_price?: string;
+  /** The catalogue floor when the line was added, kept for the upsell comparison. */
+  min_price?: string;
+  /** Plans written before pricing moved into the lines carried a note here. */
+  note?: string;
+}
+
 export interface TreatmentPlan {
   summary: string;
-  items: { treatment: string; quantity: string; note?: string }[];
+  items: TreatmentPlanItem[];
   total_price: string;
   currency: string;
   trip_days: string;

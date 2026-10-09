@@ -92,6 +92,11 @@ export default async function SessionDetail({ params }: { params: Promise<{ id: 
             {session.plan.items.map((i, k) => (
               <li key={k}>
                 • {i.treatment} × {i.quantity}
+                {i.unit_price
+                  ? ` — ${i.unit_price} ${session.plan!.currency} each${
+                      i.min_price ? ` (floor ${i.min_price})` : ""
+                    }`
+                  : ""}
                 {i.note ? ` — ${i.note}` : ""}
               </li>
             ))}
