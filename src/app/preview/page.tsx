@@ -3,7 +3,6 @@ import Flow from "@/components/Flow";
 import { defaultAssessment } from "@/lib/assessments";
 import { listBrief } from "@/lib/brief";
 import { listTreatments } from "@/lib/treatments";
-import { priceDoctorPlan } from "@/lib/upsell";
 import { listCases } from "@/lib/cases";
 import { isDatabaseReady } from "@/lib/config";
 
@@ -26,8 +25,7 @@ export default async function PreviewPage({
   const assessment = isDatabaseReady() ? await defaultAssessment() : null;
   const cases = assessment ? await listCases(assessment.id, true) : [];
   const brief = assessment ? await listBrief(assessment.id) : [];
-  const catalogue = assessment ? await listTreatments(assessment.id, true) : [];
-  const treatments = catalogue.filter((t) => t.isActive);
+  const catalogue = assessment ? await listTreatments(assessment.id) : [];
   const patient = cases.find((c) => String(c.id) === raw) ?? cases[0];
 
   if (!patient) {
@@ -75,14 +73,9 @@ export default async function PreviewPage({
         brief={assessment?.briefEnabled ? brief : []}
         briefEnabled={assessment?.briefEnabled ?? true}
         plan={null}
-        treatments={treatments}
-        doctor={{
-          text: patient.doctorIndication,
-          value: patient.doctorPlanItems.length
-            ? priceDoctorPlan(patient.doctorPlanItems, catalogue).total
-            : patient.doctorPlanValue,
-          currency: patient.doctorPlanCurrency,
-        }}
+        treatments={catalogue.filter((t) => t.specialty === patient.specialty)}
+        pricingNotes={assessment?.pricingNotes ?? ""}
+        doctor={{ text: patient.doctorIndication }}
         preview
         previewPhotos={patient.photos}
       />

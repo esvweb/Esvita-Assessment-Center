@@ -41,6 +41,7 @@ interface Props {
   plan: TreatmentPlan | null;
   doctor?: DoctorIndication;
   treatments: Treatment[];
+  pricingNotes?: string;
   preview?: boolean;
   previewPhotos?: { url: string; caption: string }[];
 }
@@ -57,6 +58,7 @@ export default function Flow({
   plan: initialPlan,
   doctor,
   treatments,
+  pricingNotes,
   preview = false,
   previewPhotos = [],
 }: Props) {
@@ -153,6 +155,7 @@ export default function Flow({
       {stage === "plan" && (
         <PlanForm
           treatments={treatments}
+          pricingNotes={pricingNotes}
           token={token}
           patientName={patientName}
           doctor={doctor}

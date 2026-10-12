@@ -1,4 +1,5 @@
 import { sql } from "./db";
+import { markdownToText, sectionMarkdown } from "./markdown";
 
 /** The clinic briefing, editable from the HR panel. */
 export interface BriefSection {
@@ -67,9 +68,6 @@ export async function deleteSection(id: string): Promise<void> {
 /** Compact form embedded in the patient agent's prompt. */
 export function briefToText(sections: BriefSection[]): string {
   return sections
-    .map((s) => {
-      const bullets = s.bullets.length ? "\n" + s.bullets.map((b) => `- ${b}`).join("\n") : "";
-      return `## ${s.title}\n${s.body}${bullets}`;
-    })
+    .map((s) => `## ${s.title}\n${markdownToText(sectionMarkdown(s))}`)
     .join("\n\n");
 }

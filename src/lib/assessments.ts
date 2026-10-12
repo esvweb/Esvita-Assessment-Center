@@ -13,6 +13,8 @@ export interface Assessment {
   isActive: boolean;
   /** When false the candidate never sees the clinic briefing or the side panel. */
   briefEnabled: boolean;
+  /** Shown beside the price list while the candidate builds a plan. Markdown. */
+  pricingNotes: string;
   createdAt: string;
   /** Counts for the panel listing. */
   caseCount?: number;
@@ -27,6 +29,7 @@ interface Row {
   description: string;
   is_active: boolean;
   brief_enabled: boolean;
+  pricing_notes: string | null;
   created_at: string;
   case_count?: number;
   session_count?: number;
@@ -40,6 +43,7 @@ const toAssessment = (r: Row): Assessment => ({
   description: r.description,
   isActive: r.is_active,
   briefEnabled: r.brief_enabled,
+  pricingNotes: r.pricing_notes ?? "",
   createdAt: r.created_at,
   caseCount: r.case_count,
   sessionCount: r.session_count,
@@ -107,14 +111,21 @@ export async function createAssessment(input: {
 
 export async function updateAssessment(
   id: string,
-  input: { name?: string; description?: string; isActive?: boolean; briefEnabled?: boolean },
+  input: {
+    name?: string;
+    description?: string;
+    isActive?: boolean;
+    briefEnabled?: boolean;
+    pricingNotes?: string;
+  },
 ): Promise<Assessment | null> {
   const rows = (await sql()`
     update assessments set
       name = coalesce(${input.name ?? null}, name),
       description = coalesce(${input.description ?? null}, description),
       is_active = coalesce(${input.isActive ?? null}, is_active),
-      brief_enabled = coalesce(${input.briefEnabled ?? null}, brief_enabled)
+      brief_enabled = coalesce(${input.briefEnabled ?? null}, brief_enabled),
+      pricing_notes = coalesce(${input.pricingNotes ?? null}, pricing_notes)
     where id = ${id} returning *`) as Row[];
   return rows[0] ? toAssessment(rows[0]) : null;
 }
@@ -135,7 +146,8 @@ export async function duplicateAssessment(
     name,
     description: source.description,
   });
-  await sql()`update assessments set brief_enabled = ${source.briefEnabled} where id = ${copy.id}`;
+  await sql()`update assessments set brief_enabled = ${source.briefEnabled},
+    pricing_notes = ${source.pricingNotes} where id = ${copy.id}`;
 
   const db = sql();
 
@@ -145,13 +157,13 @@ export async function duplicateAssessment(
       assessment_id, name, age, country, headline, situation, personality, case_plan,
       hidden_signals, objection_chain, extra_questions, technical_banks,
       special_rule, extra_prompt, doctor_indication, doctor_plan_items, doctor_plan_value,
-      doctor_plan_currency, voice_id, accent, pickup_line, is_active, sort_order
+      doctor_plan_currency, voice_id, accent, pickup_line, specialty, is_active, sort_order
     )
     select
       ${copy.id}, name, age, country, headline, situation, personality, case_plan,
       hidden_signals, objection_chain, extra_questions, technical_banks,
       special_rule, extra_prompt, doctor_indication, doctor_plan_items, doctor_plan_value,
-      doctor_plan_currency, voice_id, accent, pickup_line, is_active, sort_order
+      doctor_plan_currency, voice_id, accent, pickup_line, specialty, is_active, sort_order
     from cases where assessment_id = ${sourceId}
     order by sort_order, id
     returning id, sort_order, name`) as { id: number; sort_order: number; name: string }[];
@@ -184,8 +196,8 @@ export async function duplicateAssessment(
   // The price list comes along, otherwise the copy has nothing for a candidate
   // to quote from and the plan stage is unusable until someone notices.
   await db`
-    insert into treatments (assessment_id, name, min_price, currency, unit, category, is_active, sort_order)
-    select ${copy.id}, name, min_price, currency, unit, category, is_active, sort_order
+    insert into treatments (assessment_id, name, min_price, currency, unit, category, specialty, is_active, sort_order)
+    select ${copy.id}, name, min_price, currency, unit, category, specialty, is_active, sort_order
     from treatments where assessment_id = ${sourceId}`;
 
   // Only blocks and banks the source actually overrode exist as rows; the rest

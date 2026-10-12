@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       assessment?.briefEnabled ?? true,
       catalogue,
       objectionBank,
+      assessment?.pricingNotes ?? "",
     );
 
     await sql()`

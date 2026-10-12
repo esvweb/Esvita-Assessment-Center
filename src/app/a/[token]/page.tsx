@@ -5,7 +5,6 @@ import { getCase } from "@/lib/cases";
 import { defaultAssessment, getAssessment } from "@/lib/assessments";
 import { getSessionByToken, getTranscript } from "@/lib/db";
 import { listTreatments } from "@/lib/treatments";
-import { priceDoctorPlan } from "@/lib/upsell";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +20,10 @@ export default async function AssessmentPage({ params }: { params: Promise<{ tok
     getCase(session.profile_id),
     assessment ? listBrief(assessment.id) : Promise.resolve([]),
     getTranscript(session.id),
-    // Hidden lines too, so a dentist's plan that uses one is still priced.
-    assessment ? listTreatments(assessment.id, true) : Promise.resolve([]),
+    assessment ? listTreatments(assessment.id) : Promise.resolve([]),
   ]);
-  const doctorPlan =
-    patient && patient.doctorPlanItems.length ? priceDoctorPlan(patient.doctorPlanItems, catalogue) : null;
+  // A dental case is offered dental treatments only, a hair case hair ones.
+  const specialty = patient?.specialty ?? "dental";
   const briefEnabled = assessment?.briefEnabled ?? true;
 
   const initialChat = transcript
@@ -48,12 +46,9 @@ export default async function AssessmentPage({ params }: { params: Promise<{ tok
         brief={briefEnabled ? brief : []}
         briefEnabled={briefEnabled}
         plan={session.plan}
-        treatments={catalogue.filter((t) => t.isActive)}
-        doctor={{
-          text: patient?.doctorIndication ?? null,
-          value: doctorPlan?.total ?? patient?.doctorPlanValue ?? null,
-          currency: doctorPlan?.currency ?? patient?.doctorPlanCurrency ?? "EUR",
-        }}
+        treatments={catalogue.filter((t) => t.specialty === specialty)}
+        pricingNotes={assessment?.pricingNotes ?? ""}
+        doctor={{ text: patient?.doctorIndication ?? null }}
       />
     </main>
   );

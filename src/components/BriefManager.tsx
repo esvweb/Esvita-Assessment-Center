@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { BriefSection } from "@/lib/brief";
+import { sectionMarkdown } from "@/lib/markdown";
+import MarkdownEditor from "./MarkdownEditor";
 
 const input =
   "w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand";
@@ -74,8 +76,9 @@ function SectionRow({
   canDestroy: boolean;
 }) {
   const [title, setTitle] = useState(data.title);
-  const [body, setBody] = useState(data.body);
-  const [bullets, setBullets] = useState(data.bullets.join("\n"));
+  // An older section's separate bullet list is folded into the text here, and
+  // saved back as one text with no bullets — see sectionMarkdown.
+  const [body, setBody] = useState(sectionMarkdown(data));
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -85,11 +88,7 @@ function SectionRow({
     await fetch(`/api/admin/brief/${data.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        body,
-        bullets: bullets.split("\n").map((b) => b.trim()).filter(Boolean),
-      }),
+      body: JSON.stringify({ title, body, bullets: [] }),
     });
     setSaving(false);
     setSaved(true);
@@ -111,7 +110,7 @@ function SectionRow({
       >
         <span className="font-medium">{title}</span>
         <span className="text-sm text-muted">
-          {data.bullets.length} bullets · {open ? "close" : "edit"}
+          {open ? "close" : "edit"}
         </span>
       </button>
 
@@ -122,12 +121,13 @@ function SectionRow({
             <input value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
           </div>
           <div>
-            <label className={label}>Body</label>
-            <textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} className={input} />
-          </div>
-          <div>
-            <label className={label}>Bullets — one per line</label>
-            <textarea rows={6} value={bullets} onChange={(e) => setBullets(e.target.value)} className={input} />
+            <label className={label}>Text</label>
+            <MarkdownEditor
+              value={body}
+              onChange={setBody}
+              rows={12}
+              placeholder="Write the section. Use the toolbar for headings, bold text and lists."
+            />
           </div>
           <div className="flex items-center gap-3">
             <button

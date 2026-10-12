@@ -1,6 +1,7 @@
 import { sql } from "./db";
 import type { TechnicalBank } from "./personas";
 import type { DoctorPlanItem } from "./upsell";
+import { asSpecialty, type Specialty } from "./types";
 
 /**
  * Patient cases, loaded from the database so HR can edit them without a deploy.
@@ -48,6 +49,8 @@ export interface PatientCase {
   voice: { voiceId: string; accent: string | null };
   /** What the patient says when they answer a call from an unknown number. */
   pickupLine: string;
+  /** Decides which half of the price list the candidate is offered. */
+  specialty: Specialty;
   isActive: boolean;
   sortOrder: number;
   photos: CasePhoto[];
@@ -76,6 +79,7 @@ interface CaseRow {
   voice_id: string;
   accent: string | null;
   pickup_line: string;
+  specialty: string;
   is_active: boolean;
   sort_order: number;
 }
@@ -106,6 +110,7 @@ function toCase(row: CaseRow, photos: CasePhoto[]): PatientCase {
     doctorPlanCurrency: row.doctor_plan_currency ?? "EUR",
     voice: { voiceId: row.voice_id, accent: row.accent },
     pickupLine: row.pickup_line,
+    specialty: asSpecialty(row.specialty),
     isActive: row.is_active,
     sortOrder: row.sort_order,
     photos,
@@ -167,7 +172,7 @@ export async function createCase(
       assessment_id, name, age, country, headline, situation, personality, case_plan,
       hidden_signals, objection_chain, extra_questions, technical_banks,
       special_rule, extra_prompt, doctor_indication, doctor_plan_items, doctor_plan_value,
-      doctor_plan_currency, voice_id, accent, pickup_line, is_active, sort_order
+      doctor_plan_currency, voice_id, accent, pickup_line, specialty, is_active, sort_order
     ) values (
       ${assessmentId}, ${input.name ?? "New case"}, ${input.age ?? null}, ${input.country ?? null},
       ${input.headline ?? null}, ${input.situation ?? null}, ${input.personality ?? null},
@@ -178,7 +183,8 @@ export async function createCase(
       ${input.doctorPlanValue ?? null},
       ${input.doctorPlanCurrency ?? "EUR"},
       ${input.voiceId ?? "matilda"}, ${input.accent ?? null},
-      ${input.pickupLine ?? "Hello?"}, ${input.isActive ?? true}, ${input.sortOrder ?? 99}
+      ${input.pickupLine ?? "Hello?"}, ${asSpecialty(input.specialty)}, ${input.isActive ?? true},
+      ${input.sortOrder ?? 99}
     ) returning *`) as CaseRow[];
   return toCase(rows[0], []);
 }
@@ -200,7 +206,8 @@ export async function updateCase(id: number, input: CaseInput): Promise<PatientC
       doctor_plan_currency = ${v.doctorPlanCurrency},
       voice_id = ${input.voiceId ?? current.voice.voiceId},
       accent = ${input.accent !== undefined ? input.accent : current.voice.accent},
-      pickup_line = ${v.pickupLine}, is_active = ${v.isActive}, sort_order = ${v.sortOrder}
+      pickup_line = ${v.pickupLine}, specialty = ${asSpecialty(v.specialty)},
+      is_active = ${v.isActive}, sort_order = ${v.sortOrder}
     where id = ${id}`;
   return getCase(id);
 }

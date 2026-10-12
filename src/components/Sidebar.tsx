@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BriefSection } from "@/lib/brief";
+import { renderMarkdown, sectionMarkdown } from "@/lib/markdown";
 import type { TreatmentPlan } from "@/lib/types";
 
 /**
@@ -111,19 +112,11 @@ export default function Sidebar({
                   <span className="text-muted">{openSection === s.id ? "−" : "+"}</span>
                 </button>
                 {openSection === s.id && (
-                  <div className="px-4 pb-3 text-sm">
-                    {s.body && <p className="leading-relaxed text-muted">{s.body}</p>}
-                    {s.bullets.length > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {s.bullets.map((b) => (
-                          <li key={b} className="flex gap-1.5">
-                            <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-brand" />
-                            <span>{b}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                  <div
+                    className="space-y-2 px-4 pb-3"
+                    // Safe: renderMarkdown escapes the text before adding its own tags.
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(sectionMarkdown(s)) }}
+                  />
                 )}
               </div>
             ))}

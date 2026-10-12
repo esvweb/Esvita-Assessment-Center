@@ -21,6 +21,7 @@ export interface CatalogueEntry {
   unit: string;
   /** Lines in one group are alternatives to each other (brands, materials). */
   category: string | null;
+  specialty?: "dental" | "hair";
 }
 
 export interface DoctorPlanItem {

@@ -62,15 +62,6 @@ export const BRIEF: BriefSection[] = [
     ],
   },
   {
-    title: "Extractions",
-    body: "The clinic does not charge for a simple extraction when the tooth is coming out for implant treatment.",
-    bullets: [
-      "A simple extraction of a tooth that is being removed for an implant is free.",
-      "If that extraction has to be surgical, it is charged as a surgical extraction, per tooth, at the price-list rate.",
-      "All-on treatment clears the whole arch, so every simple extraction in an All-on arch is free — not only the teeth that receive an implant. Surgical extractions are still charged.",
-    ],
-  },
-  {
     title: "What the package covers",
     body: "Everything below is included in the quoted price. Patients ask about this constantly, and getting it wrong reads as improvisation.",
     bullets: [

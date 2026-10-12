@@ -330,3 +330,16 @@ alter table treatments add column if not exists category text;
 
 -- [{ "treatment": "<price list name>", "quantity": 4 }, ...]
 alter table cases add column if not exists doctor_plan_items jsonb not null default '[]'::jsonb;
+
+-- ---------------------------------------------------------------------------
+-- Pricing notes and specialties (2026-10-12)
+-- ---------------------------------------------------------------------------
+
+-- Notes the candidate reads beside the price list while building a plan
+-- (extraction rules and the like). Also given to the patient and the grader.
+alter table assessments add column if not exists pricing_notes text not null default '';
+
+-- A dental case shows only dental treatments and a hair case only hair ones,
+-- so one assessment can hold both kinds of patient.
+alter table treatments add column if not exists specialty text not null default 'dental';
+alter table cases add column if not exists specialty text not null default 'dental';

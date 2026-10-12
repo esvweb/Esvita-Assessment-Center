@@ -1,3 +1,4 @@
+import { getAssessment } from "@/lib/assessments";
 import { loadBanks, loadObjections } from "@/lib/banks";
 import { listBrief } from "@/lib/brief";
 import { getCase } from "@/lib/cases";
@@ -29,16 +30,18 @@ export async function GET(req: Request) {
     const patient = await getCase(caseId);
     if (!patient) throw new HttpError(404, "That case no longer exists");
 
-    const [brief, blocks, banks, objections] = await Promise.all([
+    const [brief, blocks, banks, objections, assessment] = await Promise.all([
       listBrief(patient.assessmentId),
       loadBlocks(patient.assessmentId),
       loadBanks(patient.assessmentId),
       loadObjections(patient.assessmentId),
+      getAssessment(patient.assessmentId),
     ]);
 
     const prompt = buildPatientPrompt({
       patient,
       brief,
+      pricingNotes: assessment?.pricingNotes,
       blocks,
       banks,
       objections,

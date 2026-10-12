@@ -1,19 +1,25 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { renderMarkdown } from "@/lib/markdown";
 import type { Treatment } from "@/lib/treatments";
 import type { TreatmentPlan, TreatmentPlanItem } from "@/lib/types";
 
+/**
+ * What the candidate is told about the dentist's plan: the clinical indication
+ * only. The plan's value stays on the server — shown it, candidates quote to
+ * match it instead of building their own price, which is what is assessed.
+ */
 export interface DoctorIndication {
   text: string | null;
-  value: number | null;
-  currency: string;
 }
 
 interface Props {
   token: string;
   patientName: string;
   treatments: Treatment[];
+  /** Shown under the price list, e.g. which extractions are free. Markdown. */
+  pricingNotes?: string;
   doctor?: DoctorIndication;
   onFinished: () => void;
   onSaved?: (plan: TreatmentPlan) => void;
@@ -39,6 +45,7 @@ export default function PlanForm({
   token,
   patientName,
   treatments,
+  pricingNotes,
   doctor,
   onFinished,
   onSaved,
@@ -148,17 +155,7 @@ export default function PlanForm({
 
       {doctor?.text && (
         <div className="rounded-xl border border-line bg-white p-6">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-base font-semibold">The dentist&apos;s indication</h3>
-            {doctor.value != null && (
-              <span className="text-sm text-muted">
-                Plan value:{" "}
-                <span className="font-medium text-ink">
-                  {doctor.value.toLocaleString("en-GB")} {doctor.currency}
-                </span>
-              </span>
-            )}
-          </div>
+          <h3 className="text-base font-semibold">The dentist&apos;s indication</h3>
           <p className="mt-1 text-sm text-muted">
             Our treating dentist reviewed {patientName}&apos;s photos and x-ray. This is what is
             clinically indicated — build your plan on top of it.
@@ -274,13 +271,21 @@ export default function PlanForm({
                 ))}
               </div>
 
+              {pricingNotes?.trim() && (
+                <div
+                  className="mt-3 space-y-2 rounded-lg border border-line bg-surface px-4 py-3"
+                  // Safe: renderMarkdown escapes the text before adding its own tags.
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(pricingNotes) }}
+                />
+              )}
+
               <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
                 <button
                   type="button"
                   onClick={() => setPlan((p) => ({ ...p, items: [...p.items, { ...EMPTY_ITEM }] }))}
                   className="text-sm font-medium text-brand"
                 >
-                  + Add a line
+                  + Add treatment
                 </button>
                 <p className="text-sm">
                   <span className="text-muted">Total</span>{" "}

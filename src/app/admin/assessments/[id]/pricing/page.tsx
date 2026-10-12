@@ -20,6 +20,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <PricingManager
         assessmentId={id}
         initial={await listTreatments(id, true)}
+        initialNotes={assessment.pricingNotes}
         canDelete={(await myPermissions())?.destroy ?? false}
       />
     </main>

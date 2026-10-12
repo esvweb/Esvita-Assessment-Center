@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BriefSection } from "@/lib/brief";
+import { renderMarkdown, sectionMarkdown } from "@/lib/markdown";
 
 export default function Brief({
   sections,
@@ -28,17 +29,11 @@ export default function Brief({
         {sections.map((section) => (
           <section key={section.id} className="rounded-xl border border-line bg-white p-6">
             <h3 className="text-base font-semibold">{section.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{section.body}</p>
-            {section.bullets.length > 0 && (
-              <ul className="mt-3 space-y-1.5">
-                {section.bullets.map((b) => (
-                  <li key={b} className="flex gap-2 text-sm">
-                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-brand" />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div
+              className="mt-2 space-y-3"
+              // Safe: renderMarkdown escapes the text before adding its own tags.
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(sectionMarkdown(section)) }}
+            />
           </section>
         ))}
       </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PatientCase } from "@/lib/cases";
 import { objectionMap, type QuestionBank } from "@/lib/bank-types";
 import type { TechnicalBank } from "@/lib/personas";
+import { SPECIALTIES, type Specialty } from "@/lib/types";
 import { priceDoctorPlan, type CatalogueEntry } from "@/lib/upsell";
 
 const input =
@@ -148,6 +149,7 @@ function CaseRow({
     voiceId: data.voice.voiceId,
     accent: data.voice.accent ?? "",
     isActive: data.isActive,
+    specialty: data.specialty as Specialty,
   });
   const [photos, setPhotos] = useState(data.photos);
   const [saving, setSaving] = useState(false);
@@ -247,7 +249,7 @@ function CaseRow({
 
       {open && (
         <div className="space-y-5 border-t border-line px-5 py-5">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <div>
               <label className={label}>Name</label>
               <input value={form.name} onChange={(e) => set("name", e.target.value)} className={input} />
@@ -269,6 +271,21 @@ function CaseRow({
               >
                 <option value="1">Active</option>
                 <option value="0">Inactive</option>
+              </select>
+            </div>
+            <div>
+              <label className={label}>Specialty</label>
+              <select
+                value={form.specialty}
+                onChange={(e) => set("specialty", e.target.value as Specialty)}
+                className={input}
+                title="Decides which part of the price list the candidate is offered"
+              >
+                {SPECIALTIES.map((sp) => (
+                  <option key={sp} value={sp}>
+                    {sp === "hair" ? "Hair" : "Dental"}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -331,7 +348,8 @@ function CaseRow({
             />
             {catalogue.length > 0 ? (
               <DoctorPlanEditor
-                catalogue={catalogue}
+                // The dentist plans from the same half of the list the candidate is offered.
+                catalogue={catalogue.filter((t) => (t.specialty ?? "dental") === form.specialty)}
                 items={form.doctorPlanItems}
                 onChange={(items) => set("doctorPlanItems", items)}
               />
@@ -629,8 +647,12 @@ function DoctorPlanEditor({
 
   return (
     <div className="mt-3">
-      <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
+      <p className="text-xs font-medium tracking-wide text-muted uppercase">
         Dentist&apos;s plan, priced from the price list
+      </p>
+      <p className="mt-0.5 mb-2 text-xs text-muted">
+        Not shown to the candidate — they see the indication above but price their own plan. The
+        upsell analysis measures them against this.
       </p>
       <div className="space-y-2">
         {items.map((it, i) => {
@@ -678,7 +700,7 @@ function DoctorPlanEditor({
           onClick={() => onChange([...items, { treatment: "", quantity: "1" }])}
           className="text-sm font-medium text-brand"
         >
-          + Add a line
+          + Add treatment
         </button>
         <p className="text-sm">
           <span className="text-muted">Plan value</span>{" "}

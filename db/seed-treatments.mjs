@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { PRICE_LIST } from "./price-list.mjs";
+import { PRICE_LIST, PRICING_NOTES } from "./price-list.mjs";
 
 /**
  * Seeds the priced catalogue from the clinic's price list (db/price-list.mjs).
@@ -22,12 +22,17 @@ for (const a of assessments) {
   }
   await sql.transaction(
     PRICE_LIST.map(
-      ([name, price, unit, category], order) => sql`
-        insert into treatments (assessment_id, name, min_price, currency, unit, category, sort_order)
-        values (${a.id}, ${name}, ${price}, 'EUR', ${unit}, ${category}, ${order})`,
+      ([name, price, unit, category, specialty], order) => sql`
+        insert into treatments (assessment_id, name, min_price, currency, unit, category, specialty, sort_order)
+        values (${a.id}, ${name}, ${price}, 'EUR', ${unit}, ${category}, ${specialty}, ${order})`,
     ),
   );
   console.log(`  ✓ ${a.name}: ${PRICE_LIST.length} treatments seeded`);
 }
+
+// Pricing notes, likewise only where none have been written yet.
+const noted = await sql`update assessments set pricing_notes = ${PRICING_NOTES}
+  where pricing_notes = '' returning name`;
+for (const a of noted) console.log(`  ✓ ${a.name}: pricing notes seeded`);
 
 console.log("Done.");

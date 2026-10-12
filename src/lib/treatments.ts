@@ -1,4 +1,5 @@
 import { sql } from "./db";
+import { asSpecialty, type Specialty } from "./types";
 
 /**
  * The priced treatment catalogue an assessment offers.
@@ -19,6 +20,8 @@ export interface Treatment {
   unit: string;
   /** Lines in one group are alternatives to each other (brands, materials). */
   category: string | null;
+  /** A dental case only offers dental lines, a hair case only hair ones. */
+  specialty: Specialty;
   isActive: boolean;
   sortOrder: number;
 }
@@ -31,6 +34,7 @@ interface Row {
   currency: string;
   unit: string;
   category: string | null;
+  specialty: string;
   is_active: boolean;
   sort_order: number;
 }
@@ -43,6 +47,7 @@ const toTreatment = (r: Row): Treatment => ({
   currency: r.currency,
   unit: r.unit,
   category: r.category,
+  specialty: asSpecialty(r.specialty),
   isActive: r.is_active,
   sortOrder: r.sort_order,
 });
@@ -67,6 +72,7 @@ export interface TreatmentInput {
   unit?: string;
   /** Pass null or an empty string to clear it. */
   category?: string | null;
+  specialty?: Specialty;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -76,11 +82,11 @@ export async function createTreatment(
   input: TreatmentInput,
 ): Promise<Treatment> {
   const rows = (await sql()`
-    insert into treatments (assessment_id, name, min_price, currency, unit, category, is_active, sort_order)
+    insert into treatments (assessment_id, name, min_price, currency, unit, category, specialty, is_active, sort_order)
     values (
       ${assessmentId}, ${input.name ?? "New treatment"}, ${input.minPrice ?? 0},
       ${input.currency ?? "EUR"}, ${input.unit ?? "unit"}, ${input.category?.trim() || null},
-      ${input.isActive ?? true},
+      ${asSpecialty(input.specialty)}, ${input.isActive ?? true},
       coalesce((select max(sort_order) + 1 from treatments where assessment_id = ${assessmentId}), 0)
     ) returning *`) as Row[];
   return toTreatment(rows[0]);
@@ -105,6 +111,7 @@ export async function updateTreatment(
       currency  = coalesce(${input.currency ?? null}, currency),
       unit      = coalesce(${input.unit ?? null}, unit),
       category  = case when ${setsCategory} then ${input.category?.trim() || null} else category end,
+      specialty = coalesce(${input.specialty ? asSpecialty(input.specialty) : null}, specialty),
       is_active = coalesce(${input.isActive ?? null}, is_active),
       sort_order = coalesce(${input.sortOrder ?? null}, sort_order)
     where id = ${id} returning *`) as Row[];

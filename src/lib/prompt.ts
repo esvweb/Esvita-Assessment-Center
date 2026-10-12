@@ -1,5 +1,6 @@
 import { objectionMap, type QuestionBank } from "./bank-types";
 import { briefToText, type BriefSection } from "./brief";
+import { markdownToText } from "./markdown";
 import type { PatientCase } from "./cases";
 import type { Blocks } from "./prompt-blocks";
 import type { Stage, TranscriptEntry, TreatmentPlan } from "./types";
@@ -131,6 +132,8 @@ ${lines.join("\n")}
 export interface PromptContext {
   patient: PatientCase;
   brief: BriefSection[];
+  /** The assessment's pricing notes (which extractions are free, and so on). */
+  pricingNotes?: string;
   blocks: Blocks;
   banks: QuestionBank[];
   objections: QuestionBank;
@@ -146,7 +149,9 @@ export function buildPatientPrompt(ctx: PromptContext): string {
     ctx.blocks.master_rules,
     caseBlock(ctx.patient, ctx.banks, ctx.objections),
     stageBlock(ctx.stage, ctx.blocks, ctx.patient, ctx.plan),
-    `## THE CLINIC'S REAL FACTS (for your judgement only — never recite these)\n\n${briefToText(ctx.brief)}`,
+    `## THE CLINIC'S REAL FACTS (for your judgement only — never recite these)\n\n${briefToText(ctx.brief)}${
+      ctx.pricingNotes?.trim() ? `\n\n## Pricing notes\n${markdownToText(ctx.pricingNotes)}` : ""
+    }`,
     historyBlock(ctx.history),
     ctx.blocks.out_of_scope,
   ]

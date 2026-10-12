@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Vapi from "@vapi-ai/web";
+import { startDialler, type Dialler } from "@/lib/dialler";
 
 type Line = { speaker: "candidate" | "patient"; text: string };
 type Phase = "idle" | "connecting" | "live" | "saving" | "ended" | "error";
@@ -27,6 +28,7 @@ export default function VoiceCall({
   const [partial, setPartial] = useState("");
   const [seconds, setSeconds] = useState(0);
   const [patientSpeaking, setPatientSpeaking] = useState(false);
+  const [ringing, setRinging] = useState(false);
 
   const vapiRef = useRef<Vapi | null>(null);
   const linesRef = useRef<Line[]>([]);
@@ -34,6 +36,13 @@ export default function VoiceCall({
   const callIdRef = useRef<string | null>(null);
   const finishedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const diallerRef = useRef<Dialler | null>(null);
+
+  const stopDialler = useCallback(() => {
+    diallerRef.current?.stop();
+    diallerRef.current = null;
+    setRinging(false);
+  }, []);
 
   const channel = callNumber === 1 ? "voice_1" : "voice_2";
 
@@ -89,6 +98,15 @@ export default function VoiceCall({
   }, [token, channel, callNumber, onFinished]);
 
   const start = useCallback(async () => {
+    // Before any await: the click that placed the call is the only moment the
+    // browser will let the page make sound.
+    stopDialler();
+    const dialler = startDialler();
+    diallerRef.current = dialler;
+    void dialler.ready.then(() => {
+      if (diallerRef.current === dialler) setRinging(true);
+    });
+
     setError(null);
     setPhase("connecting");
     try {
@@ -106,7 +124,10 @@ export default function VoiceCall({
       const vapi = new Vapi(data.publicKey);
       vapiRef.current = vapi;
 
-      vapi.on("call-start", () => setPhase("live"));
+      vapi.on("call-start", () => {
+        stopDialler();
+        setPhase("live");
+      });
       vapi.on("speech-start", () => setPatientSpeaking(true));
       vapi.on("speech-end", () => setPatientSpeaking(false));
 
@@ -135,6 +156,7 @@ export default function VoiceCall({
           typeof e === "object" && e && "message" in e
             ? String((e as { message: unknown }).message)
             : "Call error";
+        stopDialler();
         setError(message);
         setPhase("error");
       });
@@ -143,9 +165,13 @@ export default function VoiceCall({
         void finish();
       });
 
+      // Let the number be keyed and the line ring once before connecting, so the
+      // patient picks up the way a real one would — a ring or two in.
+      await dialler.ready;
       const call = await vapi.start(data.assistantId);
       if (call?.id) callIdRef.current = call.id;
     } catch (e) {
+      stopDialler();
       // A raw network error string means nothing to a candidate mid-assessment.
       const raw = e instanceof Error ? e.message : "";
       const networkish = /fetch failed|unreachable|NetworkError|Failed to fetch|timeout/i.test(raw);
@@ -156,7 +182,7 @@ export default function VoiceCall({
       );
       setPhase("error");
     }
-  }, [token, callNumber, finish]);
+  }, [token, callNumber, finish, stopDialler]);
 
   const hangUp = useCallback(() => {
     void vapiRef.current?.stop();
@@ -164,6 +190,7 @@ export default function VoiceCall({
 
   useEffect(() => {
     return () => {
+      diallerRef.current?.stop();
       void vapiRef.current?.stop();
     };
   }, []);
@@ -230,7 +257,10 @@ export default function VoiceCall({
         )}
 
         {phase === "connecting" && (
-          <p className="mt-4 text-sm text-muted">Dialling…</p>
+          <p className="mt-4 flex items-center gap-2 text-sm text-muted">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brand" />
+            {ringing ? `Ringing ${patientName}…` : "Dialling…"}
+          </p>
         )}
 
         {phase === "live" && (

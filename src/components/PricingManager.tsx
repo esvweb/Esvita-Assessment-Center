@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import type { Treatment } from "@/lib/treatments";
+import { SPECIALTIES, type Specialty } from "@/lib/types";
+import MarkdownEditor from "./MarkdownEditor";
+
+const SPECIALTY_LABEL: Record<Specialty, string> = { dental: "Dental", hair: "Hair" };
 
 const input =
   "w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand";
@@ -9,13 +13,17 @@ const input =
 export default function PricingManager({
   assessmentId,
   initial,
+  initialNotes,
   canDelete,
 }: {
   assessmentId: string;
   initial: Treatment[];
+  initialNotes: string;
   canDelete: boolean;
 }) {
   const [rows, setRows] = useState(initial);
+  const [specialty, setSpecialty] = useState<Specialty>("dental");
+  const [showing, setShowing] = useState<Specialty | "all">("all");
   const [name, setName] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [unit, setUnit] = useState("unit");
@@ -47,6 +55,7 @@ export default function PricingManager({
           unit,
           currency,
           category,
+          specialty,
         }),
       });
       const d = await res.json();
@@ -117,9 +126,21 @@ export default function PricingManager({
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             list="treatment-groups"
-            placeholder="Group (optional) — e.g. Single implant"
-            className={`col-span-12 ${input}`}
+            placeholder="Group (optional) — e.g. Implant"
+            className={`col-span-9 ${input}`}
           />
+          <select
+            value={specialty}
+            onChange={(e) => setSpecialty(e.target.value as Specialty)}
+            className={`col-span-3 ${input}`}
+            title="Only cases of this specialty offer the line"
+          >
+            {SPECIALTIES.map((s) => (
+              <option key={s} value={s}>
+                {SPECIALTY_LABEL[s]} cases
+              </option>
+            ))}
+          </select>
           <datalist id="treatment-groups">
             {groups.map((g) => (
               <option key={g} value={g} />
@@ -128,16 +149,89 @@ export default function PricingManager({
         </form>
         {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
 
-        <ul className="mt-4 divide-y divide-line border-t border-line">
-          {rows.map((t) => (
-            <Row key={t.id} data={t} canDelete={canDelete} onChanged={refresh} />
+        <div className="mt-5 flex items-center gap-1 text-sm">
+          {(["all", ...SPECIALTIES] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setShowing(s)}
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                showing === s ? "bg-brand text-white" : "border border-line text-muted"
+              }`}
+            >
+              {s === "all" ? `All (${rows.length})` : `${SPECIALTY_LABEL[s]} (${rows.filter((r) => r.specialty === s).length})`}
+            </button>
           ))}
+          <span className="ml-2 text-xs text-muted">
+            A dental case only offers dental lines; a hair case only hair ones.
+          </span>
+        </div>
+
+        <ul className="mt-3 divide-y divide-line border-t border-line">
+          {rows
+            .filter((t) => showing === "all" || t.specialty === showing)
+            .map((t) => (
+              <Row key={t.id} data={t} canDelete={canDelete} onChanged={refresh} />
+            ))}
           {rows.length === 0 && (
             <li className="py-3 text-sm text-muted">
               Nothing priced yet. Until you add lines here, candidates cannot build a plan.
             </li>
           )}
         </ul>
+      </div>
+
+      <PricingNotes assessmentId={assessmentId} initial={initialNotes} />
+    </div>
+  );
+}
+
+/** Shown under the price list while the candidate builds a plan. */
+function PricingNotes({ assessmentId, initial }: { assessmentId: string; initial: string }) {
+  const [notes, setNotes] = useState(initial);
+  const [saved, setSaved] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/admin/assessments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: assessmentId, pricingNotes: notes }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Could not save");
+      setSaved(notes);
+      setNote("Saved.");
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-line bg-white p-6">
+      <h2 className="text-base font-semibold">Pricing notes</h2>
+      <p className="mt-1 mb-4 text-sm text-muted">
+        Shown to the candidate under the price list while they build a plan — rules such as which
+        extractions are free. The patient and the report are given them too, so an answer that
+        follows them is judged right.
+      </p>
+      <MarkdownEditor value={notes} onChange={setNotes} rows={6} />
+      <div className="mt-3 flex items-center gap-3 text-sm">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={busy || notes === saved}
+          className="rounded-lg bg-brand px-4 py-2 font-medium text-white disabled:opacity-40"
+        >
+          {busy ? "Saving…" : "Save notes"}
+        </button>
+        {note && <span className="text-muted">{note}</span>}
       </div>
     </div>
   );
@@ -158,6 +252,7 @@ function Row({
   const [unit, setUnit] = useState(data.unit);
   const [currency, setCurrency] = useState(data.currency);
   const [category, setCategory] = useState(data.category ?? "");
+  const [specialty, setSpecialty] = useState<Specialty>(data.specialty);
   const [busy, setBusy] = useState(false);
 
   async function patch(body: Record<string, unknown>) {
@@ -215,7 +310,7 @@ function Row({
             type="button"
             disabled={busy}
             onClick={() =>
-              void patch({ name, minPrice: Number(minPrice) || 0, unit, currency, category })
+              void patch({ name, minPrice: Number(minPrice) || 0, unit, currency, category, specialty })
             }
             className="col-span-1 rounded-lg bg-brand px-2 py-2 text-sm font-medium text-white disabled:opacity-40"
           >
@@ -233,8 +328,19 @@ function Row({
             onChange={(e) => setCategory(e.target.value)}
             list="treatment-groups"
             placeholder="Group (optional)"
-            className={`col-span-12 ${input}`}
+            className={`col-span-9 ${input}`}
           />
+          <select
+            value={specialty}
+            onChange={(e) => setSpecialty(e.target.value as Specialty)}
+            className={`col-span-3 ${input}`}
+          >
+            {SPECIALTIES.map((s) => (
+              <option key={s} value={s}>
+                {SPECIALTY_LABEL[s]} cases
+              </option>
+            ))}
+          </select>
         </div>
         {name.trim() !== data.name && (
           <p className="mt-1 text-xs text-muted">
@@ -256,6 +362,9 @@ function Row({
           <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-xs text-brand">
             {data.category}
           </span>
+        )}
+        {data.specialty === "hair" && (
+          <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800">hair</span>
         )}
         {!data.isActive && (
           <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-xs text-muted">hidden</span>

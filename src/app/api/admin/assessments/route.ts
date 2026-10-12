@@ -34,6 +34,9 @@ export async function PATCH(req: Request) {
     if (!id) throw new HttpError(400, "id is required");
     // Retiring an assessment takes it away from everyone, so it needs delete rights.
     if (rest.isActive === false) await requirePermission("destroy");
+    if (rest.pricingNotes !== undefined && typeof rest.pricingNotes !== "string") {
+      throw new HttpError(400, "Pricing notes must be text");
+    }
     const updated = await updateAssessment(id, rest as never);
     if (!updated) throw new HttpError(404, "Assessment not found");
     return Response.json({ assessment: updated });

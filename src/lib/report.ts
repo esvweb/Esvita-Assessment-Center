@@ -89,6 +89,8 @@ export async function generateReport(
   catalogue: CatalogueEntry[],
   /** The assessment's own objection bank — the one the patient was actually given. */
   objectionBank: QuestionBank,
+  /** Shown to the candidate beside the price list; the extraction rules live here. */
+  pricingNotes = "",
 ): Promise<GeneratedReport> {
   const bank = objectionMap(objectionBank);
   const objections = patient.objectionChain
@@ -122,11 +124,11 @@ Case plan the clinic had prepared: ${patient.casePlan}
 
 ## THE DENTIST'S INDICATION AND THE UPSELL COMPARISON
 
-This is what the treating dentist prescribed after reviewing the photos, and what that plan is worth at the clinic's list prices. The candidate saw the indication and its value while writing their own plan, and built their plan from the same price list.
+This is what the treating dentist prescribed after reviewing the photos, and what that plan is worth at the clinic's list prices. The candidate saw the indication but NOT its value — the figure was withheld so that they price the plan themselves rather than match a number — and they built their plan from the same price list.
 
 ${patient.doctorIndication ?? "(no indication was configured for this case)"}
 
-${upsell}
+${pricingNotes.trim() ? `Pricing notes the candidate saw beside the price list:\n${pricingNotes.trim()}\n\n` : ""}${upsell}
 
 These figures are computed from the price list and are exact. Use them as given — do not recompute them, and do not contradict them. Your job is to judge what they mean, in BOTH directions:
 - **Priced above list** — the candidate charged more than the list price. Legitimate only if they justified it to the patient; note whether they did.

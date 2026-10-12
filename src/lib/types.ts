@@ -1,5 +1,10 @@
 export type Stage = "brief" | "call_1" | "chat" | "plan" | "call_2" | "report" | "done";
 
+/** Which side of the clinic a case or a price-list line belongs to. */
+export type Specialty = "dental" | "hair";
+export const SPECIALTIES: Specialty[] = ["dental", "hair"];
+export const asSpecialty = (v: unknown): Specialty => (v === "hair" ? "hair" : "dental");
+
 export const STAGE_ORDER: Stage[] = ["brief", "call_1", "chat", "plan", "call_2", "report", "done"];
 
 export function nextStage(current: Stage): Stage {
