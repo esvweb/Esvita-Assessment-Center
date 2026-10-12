@@ -35,17 +35,19 @@ export const PRICE_LIST = [
   ["Sinus lifting, both sides", 850, "procedure", null],
 
   // Implantology — single implants
-  ["Implant — Implance (Turkish)", 275, "implant", "Single implant"],
-  ["Implant — Osstem (Korea)", 370, "implant", "Single implant"],
-  ["Implant — Hiossen (USA)", 425, "implant", "Single implant"],
-  ["Implant — Megagen AnyRidge, immediate (S. Korea)", 675, "implant", "Single implant"],
-  ["Implant — Straumann (Swiss)", 1100, "implant", "Single implant"],
+  ["Implant — Implance (Turkish)", 275, "implant", "Implant"],
+  ["Implant — Osstem (Korea)", 370, "implant", "Implant"],
+  ["Implant — Hiossen (USA)", 425, "implant", "Implant"],
+  ["Implant — Megagen AnyRidge, immediate (S. Korea)", 675, "implant", "Implant"],
+  ["Implant — Straumann (Swiss)", 1100, "implant", "Implant"],
 
-  // Implantology — All-on series, priced per implant, multiunit included
-  ["All-on implant — Implance (Turkish), multiunit incl.", 375, "implant", "All-on implant"],
-  ["All-on implant — Osstem (Korea), multiunit incl.", 470, "implant", "All-on implant"],
-  ["All-on implant — Hiossen (USA), multiunit incl.", 525, "implant", "All-on implant"],
-  ["All-on implant — Straumann (Swiss), multiunit incl.", 1250, "implant", "All-on implant"],
+  // Implantology — All-on series, priced per implant, multiunit included. Also
+  // the line for a single implant that needs a multiunit abutment, which has no
+  // price of its own; that is why single and All-on implants share a group.
+  ["All-on implant — Implance (Turkish), multiunit incl.", 375, "implant", "Implant"],
+  ["All-on implant — Osstem (Korea), multiunit incl.", 470, "implant", "Implant"],
+  ["All-on implant — Hiossen (USA), multiunit incl.", 525, "implant", "Implant"],
+  ["All-on implant — Straumann (Swiss), multiunit incl.", 1250, "implant", "Implant"],
 
   // Orthodontics
   ["Clear aligner (Istanbul Aligner)", 3000, "treatment", null],

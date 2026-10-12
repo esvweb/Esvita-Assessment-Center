@@ -47,7 +47,7 @@ export const BRIEF: BriefSection[] = [
   },
   {
     title: "Price list (EUR)",
-    body: "List prices per unit, in EUR. The list price is the minimum that may be quoted; quoting above it is allowed. All-on implants are priced per implant with the multiunit included, and the prosthesis is priced per jaw. Hair transplant prices include the hotel nights shown.",
+    body: "List prices per unit, in EUR. The list price is the minimum that may be quoted; quoting above it is allowed. All-on implants are priced per implant with the multiunit included, and the prosthesis is priced per jaw. Hair transplant prices include the hotel nights shown. Simple extractions are free for implant patients; only surgical extraction is charged.",
     bullets: [
       "Diagnosis: Digital joint tomography €200 per scan · General anaesthesia €1,200 per session · Sedation €800 per session",
       "Surgery: Surgical extraction €150 per tooth · Bone grafting €200 per cc · Apical resection €250 per tooth · Gum grafting €375 per site · Sinus lifting, one side €500 per procedure · Sinus lifting, both sides €850 per procedure",
