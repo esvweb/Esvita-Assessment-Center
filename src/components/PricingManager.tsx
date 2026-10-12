@@ -20,8 +20,12 @@ export default function PricingManager({
   const [minPrice, setMinPrice] = useState("");
   const [unit, setUnit] = useState("unit");
   const [currency, setCurrency] = useState("EUR");
+  const [category, setCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Existing group names, offered as suggestions so a typo does not split a group.
+  const groups = [...new Set(rows.map((r) => r.category).filter(Boolean))] as string[];
 
   async function refresh() {
     const res = await fetch(`/api/admin/treatments?assessment=${assessmentId}`);
@@ -42,12 +46,14 @@ export default function PricingManager({
           minPrice: Number(minPrice) || 0,
           unit,
           currency,
+          category,
         }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Could not add");
       setName("");
       setMinPrice("");
+      setCategory("");
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add");
@@ -64,6 +70,12 @@ export default function PricingManager({
           These are the lines a candidate can put on a treatment plan. The minimum is the floor: the
           plan form starts each line at this price and refuses to send anything below it, so what
           separates candidates is how far above the floor they sell and how they justify it.
+        </p>
+        <p className="mt-2 text-sm text-muted">
+          Lines in the same <span className="font-medium text-ink">group</span> are alternatives to
+          each other — implant brands, crown materials. The upsell analysis compares by group, so a
+          candidate who picks a better brand than the dentist&apos;s plan is credited with an upgrade
+          rather than marked as dropping one treatment and adding another.
         </p>
 
         <form onSubmit={add} className="mt-4 grid grid-cols-12 gap-2">
@@ -101,6 +113,18 @@ export default function PricingManager({
           >
             Add
           </button>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            list="treatment-groups"
+            placeholder="Group (optional) — e.g. Single implant"
+            className={`col-span-12 ${input}`}
+          />
+          <datalist id="treatment-groups">
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
         </form>
         {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
 
@@ -133,6 +157,7 @@ function Row({
   const [minPrice, setMinPrice] = useState(String(data.minPrice));
   const [unit, setUnit] = useState(data.unit);
   const [currency, setCurrency] = useState(data.currency);
+  const [category, setCategory] = useState(data.category ?? "");
   const [busy, setBusy] = useState(false);
 
   async function patch(body: Record<string, unknown>) {
@@ -190,7 +215,7 @@ function Row({
             type="button"
             disabled={busy}
             onClick={() =>
-              void patch({ name, minPrice: Number(minPrice) || 0, unit, currency })
+              void patch({ name, minPrice: Number(minPrice) || 0, unit, currency, category })
             }
             className="col-span-1 rounded-lg bg-brand px-2 py-2 text-sm font-medium text-white disabled:opacity-40"
           >
@@ -203,7 +228,19 @@ function Row({
           >
             Cancel
           </button>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            list="treatment-groups"
+            placeholder="Group (optional)"
+            className={`col-span-12 ${input}`}
+          />
         </div>
+        {name.trim() !== data.name && (
+          <p className="mt-1 text-xs text-muted">
+            Renaming carries through to every dentist&apos;s plan that uses this line.
+          </p>
+        )}
       </li>
     );
   }
@@ -215,6 +252,11 @@ function Row({
         <span className="text-muted">
           · minimum {data.minPrice.toLocaleString("en-GB")} {data.currency} per {data.unit}
         </span>
+        {data.category && (
+          <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-xs text-brand">
+            {data.category}
+          </span>
+        )}
         {!data.isActive && (
           <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-xs text-muted">hidden</span>
         )}

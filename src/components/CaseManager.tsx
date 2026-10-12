@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PatientCase } from "@/lib/cases";
 import { objectionMap, type QuestionBank } from "@/lib/bank-types";
 import type { TechnicalBank } from "@/lib/personas";
+import { priceDoctorPlan, type CatalogueEntry } from "@/lib/upsell";
 
 const input =
   "w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand";
@@ -18,10 +19,13 @@ export default function CaseManager({
   initial,
   banks,
   objections,
+  catalogue,
   canDestroy,
 }: {
   assessmentId: string;
   initial: PatientCase[];
+  /** The assessment's price list, for building the dentist's plan. */
+  catalogue: CatalogueEntry[];
   /** Live banks, so the pickers follow whatever Agent prompt now says. */
   banks: QuestionBank[];
   objections: QuestionBank;
@@ -82,6 +86,7 @@ export default function CaseManager({
             onSaved={refresh}
             banks={banks}
             objections={objections}
+            catalogue={catalogue}
             onNotice={setNotice}
             canDestroy={canDestroy}
           />
@@ -104,6 +109,7 @@ function CaseRow({
   onNotice,
   banks,
   objections,
+  catalogue,
   canDestroy,
 }: {
   data: PatientCase;
@@ -113,6 +119,7 @@ function CaseRow({
   onNotice: (m: string | null) => void;
   banks: QuestionBank[];
   objections: QuestionBank;
+  catalogue: CatalogueEntry[];
   canDestroy: boolean;
 }) {
   const objectionText = objectionMap(objections);
@@ -133,6 +140,10 @@ function CaseRow({
     extraPrompt: data.extraPrompt ?? "",
     doctorIndication: data.doctorIndication ?? "",
     doctorPlanValue: data.doctorPlanValue ?? "",
+    doctorPlanItems: data.doctorPlanItems.map((i) => ({
+      treatment: i.treatment,
+      quantity: String(i.quantity),
+    })),
     doctorPlanCurrency: data.doctorPlanCurrency ?? "EUR",
     voiceId: data.voice.voiceId,
     accent: data.voice.accent ?? "",
@@ -160,7 +171,16 @@ function CaseRow({
           hiddenSignals: toLines(form.hiddenSignals),
           extraQuestions: toLines(form.extraQuestions),
           doctorIndication: form.doctorIndication || null,
-          doctorPlanValue: form.doctorPlanValue === "" ? null : Number(form.doctorPlanValue),
+          // With a price list the server prices the plan from its lines; the
+          // hand-typed figure only stands in for an assessment that has none.
+          doctorPlanItems: form.doctorPlanItems
+            .filter((i) => i.treatment && Number(i.quantity) > 0)
+            .map((i) => ({ treatment: i.treatment, quantity: Number(i.quantity) })),
+          doctorPlanValue: catalogue.length
+            ? null
+            : form.doctorPlanValue === ""
+              ? null
+              : Number(form.doctorPlanValue),
           specialRule: form.specialRule || null,
           extraPrompt: form.extraPrompt || null,
         }),
@@ -309,6 +329,13 @@ function CaseRow({
               placeholder="What is clinically indicated after reviewing the photos and x-ray…"
               className={input}
             />
+            {catalogue.length > 0 ? (
+              <DoctorPlanEditor
+                catalogue={catalogue}
+                items={form.doctorPlanItems}
+                onChange={(items) => set("doctorPlanItems", items)}
+              />
+            ) : (
             <div className="mt-3 grid grid-cols-3 gap-3">
               <div>
                 <label className={label}>Value of the doctor&apos;s plan</label>
@@ -332,6 +359,7 @@ function CaseRow({
                 </select>
               </div>
             </div>
+            )}
           </div>
 
           <div>
@@ -569,6 +597,96 @@ function FullPrompt({ caseId }: { caseId: number }) {
           </pre>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * The dentist's plan as lines from the price list. The total shown here is
+ * only a preview — the server prices the plan again on save, from the list,
+ * because it is the baseline every candidate's upsell is measured against.
+ */
+function DoctorPlanEditor({
+  catalogue,
+  items,
+  onChange,
+}: {
+  catalogue: CatalogueEntry[];
+  items: { treatment: string; quantity: string }[];
+  onChange: (items: { treatment: string; quantity: string }[]) => void;
+}) {
+  const priced = priceDoctorPlan(
+    items.map((i) => ({ treatment: i.treatment, quantity: Number(i.quantity) || 0 })),
+    catalogue,
+  );
+  const names = new Set(catalogue.map((t) => t.name));
+  const fieldCls =
+    "w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand";
+  const fmt = (n: number) => n.toLocaleString("en-GB", { maximumFractionDigits: 2 });
+
+  const patch = (i: number, p: Partial<{ treatment: string; quantity: string }>) =>
+    onChange(items.map((it, j) => (i === j ? { ...it, ...p } : it)));
+
+  return (
+    <div className="mt-3">
+      <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
+        Dentist&apos;s plan, priced from the price list
+      </p>
+      <div className="space-y-2">
+        {items.map((it, i) => {
+          const line = priced.lines[i];
+          const unknown = it.treatment !== "" && !names.has(it.treatment);
+          return (
+            <div key={i} className="grid grid-cols-12 items-center gap-2">
+              <select
+                value={unknown ? "" : it.treatment}
+                onChange={(e) => patch(i, { treatment: e.target.value })}
+                className={`col-span-7 ${fieldCls} ${unknown ? "border-red-500" : ""}`}
+              >
+                <option value="">{unknown ? `Not in the price list: ${it.treatment}` : "Choose…"}</option>
+                {catalogue.map((t) => (
+                  <option key={t.name} value={t.name}>
+                    {t.name} — {fmt(t.minPrice)} {t.currency} / {t.unit}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={it.quantity}
+                onChange={(e) => patch(i, { quantity: e.target.value })}
+                inputMode="numeric"
+                placeholder="Qty"
+                className={`col-span-2 ${fieldCls}`}
+              />
+              <span className="col-span-2 text-right text-sm">
+                {line?.known ? `${fmt(line.total)} ${priced.currency}` : "—"}
+              </span>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                aria-label="Remove this line"
+                className="col-span-1 text-sm text-muted hover:text-red-700"
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
+        <button
+          type="button"
+          onClick={() => onChange([...items, { treatment: "", quantity: "1" }])}
+          className="text-sm font-medium text-brand"
+        >
+          + Add a line
+        </button>
+        <p className="text-sm">
+          <span className="text-muted">Plan value</span>{" "}
+          <span className="font-semibold">
+            {fmt(priced.total)} {priced.currency}
+          </span>
+        </p>
+      </div>
     </div>
   );
 }

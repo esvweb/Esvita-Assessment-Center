@@ -12,76 +12,82 @@
  * PDF relied on its section heading for meaning — "Osstem (Korea)" appears
  * under both single implants and All-on implants at different prices.
  *
- * [name, list price in EUR, unit]
+ * Lines that share a group are alternatives to one another — implant brands,
+ * crown materials, prosthesis types, hair transplant techniques. The upsell
+ * analysis compares the candidate with the dentist by group, so choosing a
+ * better brand reads as an upgrade rather than as one treatment dropped and an
+ * unindicated one added. null means the line stands on its own.
+ *
+ * [name, list price in EUR, unit, group]
  */
 export const PRICE_LIST = [
   // Oral diagnosis
-  ["Digital joint tomography", 200, "scan"],
-  ["General anaesthesia", 1200, "session"],
-  ["Sedation", 800, "session"],
+  ["Digital joint tomography", 200, "scan", null],
+  ["General anaesthesia", 1200, "session", "Anaesthesia"],
+  ["Sedation", 800, "session", "Anaesthesia"],
 
   // Implantology — surgical operations
-  ["Surgical extraction", 150, "tooth"],
-  ["Bone grafting", 200, "cc"],
-  ["Apical resection", 250, "tooth"],
-  ["Gum grafting", 375, "site"],
-  ["Sinus lifting, one side", 500, "procedure"],
-  ["Sinus lifting, both sides", 850, "procedure"],
+  ["Surgical extraction", 150, "tooth", null],
+  ["Bone grafting", 200, "cc", null],
+  ["Apical resection", 250, "tooth", null],
+  ["Gum grafting", 375, "site", null],
+  ["Sinus lifting, one side", 500, "procedure", null],
+  ["Sinus lifting, both sides", 850, "procedure", null],
 
   // Implantology — single implants
-  ["Implant — Implance (Turkish)", 275, "implant"],
-  ["Implant — Osstem (Korea)", 370, "implant"],
-  ["Implant — Hiossen (USA)", 425, "implant"],
-  ["Implant — Megagen AnyRidge, immediate (S. Korea)", 675, "implant"],
-  ["Implant — Straumann (Swiss)", 1100, "implant"],
+  ["Implant — Implance (Turkish)", 275, "implant", "Single implant"],
+  ["Implant — Osstem (Korea)", 370, "implant", "Single implant"],
+  ["Implant — Hiossen (USA)", 425, "implant", "Single implant"],
+  ["Implant — Megagen AnyRidge, immediate (S. Korea)", 675, "implant", "Single implant"],
+  ["Implant — Straumann (Swiss)", 1100, "implant", "Single implant"],
 
   // Implantology — All-on series, priced per implant, multiunit included
-  ["All-on implant — Implance (Turkish), multiunit incl.", 375, "implant"],
-  ["All-on implant — Osstem (Korea), multiunit incl.", 470, "implant"],
-  ["All-on implant — Hiossen (USA), multiunit incl.", 525, "implant"],
-  ["All-on implant — Straumann (Swiss), multiunit incl.", 1250, "implant"],
+  ["All-on implant — Implance (Turkish), multiunit incl.", 375, "implant", "All-on implant"],
+  ["All-on implant — Osstem (Korea), multiunit incl.", 470, "implant", "All-on implant"],
+  ["All-on implant — Hiossen (USA), multiunit incl.", 525, "implant", "All-on implant"],
+  ["All-on implant — Straumann (Swiss), multiunit incl.", 1250, "implant", "All-on implant"],
 
   // Orthodontics
-  ["Clear aligner (Istanbul Aligner)", 3000, "treatment"],
+  ["Clear aligner (Istanbul Aligner)", 3000, "treatment", null],
 
   // Prosthetic dentistry
-  ["Metal-fused ceramic crown", 120, "tooth"],
-  ["Zirconium crown", 150, "tooth"],
-  ["Zirconium-supported E-max crown", 190, "tooth"],
-  ["E-max crown", 225, "tooth"],
-  ["E-max laminate veneer", 275, "tooth"],
-  ["Acrylic prosthesis", 700, "jaw"],
-  ["Hybrid prosthesis", 2750, "jaw"],
-  ["Titanium bar prosthesis", 3250, "jaw"],
+  ["Metal-fused ceramic crown", 120, "tooth", "Crown"],
+  ["Zirconium crown", 150, "tooth", "Crown"],
+  ["Zirconium-supported E-max crown", 190, "tooth", "Crown"],
+  ["E-max crown", 225, "tooth", "Crown"],
+  ["E-max laminate veneer", 275, "tooth", null],
+  ["Acrylic prosthesis", 700, "jaw", "Full-arch prosthesis"],
+  ["Hybrid prosthesis", 2750, "jaw", "Full-arch prosthesis"],
+  ["Titanium bar prosthesis", 3250, "jaw", "Full-arch prosthesis"],
 
   // Dental comfort & protection
-  ["Masseter botox", 450, "session"],
-  ["Temporary denture", 225, "jaw"],
-  ["Night guard", 200, "appliance"],
+  ["Masseter botox", 450, "session", null],
+  ["Temporary denture", 225, "jaw", null],
+  ["Night guard", 200, "appliance", null],
 
   // Conservative dentistry / endodontics
-  ["Composite filling", 60, "tooth"],
-  ["Aesthetic filling", 80, "tooth"],
-  ["Fiber post", 80, "tooth"],
-  ["Root canal treatment (incl. composite filling)", 125, "tooth"],
+  ["Composite filling", 60, "tooth", "Filling"],
+  ["Aesthetic filling", 80, "tooth", "Filling"],
+  ["Fiber post", 80, "tooth", null],
+  ["Root canal treatment (incl. composite filling)", 125, "tooth", null],
 
   // Periodontology
-  ["Cleaning", 60, "session"],
-  ["Curettage (full mouth)", 150, "session"],
-  ["Gingivectomy, one jaw", 160, "procedure"],
-  ["Gingivectomy, both jaws", 240, "procedure"],
+  ["Cleaning", 60, "session", null],
+  ["Curettage (full mouth)", 150, "session", null],
+  ["Gingivectomy, one jaw", 160, "procedure", null],
+  ["Gingivectomy, both jaws", 240, "procedure", null],
 
   // Hair operations
-  ["PRP therapy", 200, "session"],
-  ["Sapphire FUE hair transplant — incl. 2 nights' hotel", 1799, "procedure"],
-  ["DHI hair transplant, single session — incl. 2 nights' hotel", 1799, "procedure"],
-  ["DHI hair transplant, double session — incl. 3 nights' hotel", 3299, "procedure"],
-  ["Autologous micrograft treatment", 1399, "treatment"],
-  ["DHI + autologous micrograft package", 3199, "package"],
-  ["Eyebrow transplant", 1799, "procedure"],
-  ["Beard transplant", 1799, "procedure"],
+  ["PRP therapy", 200, "session", null],
+  ["Sapphire FUE hair transplant — incl. 2 nights' hotel", 1799, "procedure", "Hair transplant"],
+  ["DHI hair transplant, single session — incl. 2 nights' hotel", 1799, "procedure", "Hair transplant"],
+  ["DHI hair transplant, double session — incl. 3 nights' hotel", 3299, "procedure", "Hair transplant"],
+  ["Autologous micrograft treatment", 1399, "treatment", null],
+  ["DHI + autologous micrograft package", 3199, "package", "Hair transplant"],
+  ["Eyebrow transplant", 1799, "procedure", null],
+  ["Beard transplant", 1799, "procedure", null],
 
   // Hair comfort & protection
-  ["Mesotherapy", 300, "session"],
-  ["Post-op haircare vitamin set", 450, "set"],
+  ["Mesotherapy", 300, "session", null],
+  ["Post-op haircare vitamin set", 450, "set", null],
 ];

@@ -22,9 +22,9 @@ for (const a of assessments) {
   }
   await sql.transaction(
     PRICE_LIST.map(
-      ([name, price, unit], order) => sql`
-        insert into treatments (assessment_id, name, min_price, currency, unit, sort_order)
-        values (${a.id}, ${name}, ${price}, 'EUR', ${unit}, ${order})`,
+      ([name, price, unit, category], order) => sql`
+        insert into treatments (assessment_id, name, min_price, currency, unit, category, sort_order)
+        values (${a.id}, ${name}, ${price}, 'EUR', ${unit}, ${category}, ${order})`,
     ),
   );
   console.log(`  ✓ ${a.name}: ${PRICE_LIST.length} treatments seeded`);

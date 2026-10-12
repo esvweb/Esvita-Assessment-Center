@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       minPrice?: number;
       currency?: string;
       unit?: string;
+      category?: string | null;
     };
     if (!assessmentId) throw new HttpError(400, "An assessment is required");
     if (!input.name?.trim()) throw new HttpError(400, "Give the treatment a name");
@@ -49,6 +50,7 @@ export async function PATCH(req: Request) {
       minPrice?: number;
       currency?: string;
       unit?: string;
+      category?: string | null;
       isActive?: boolean;
     };
     if (!id) throw new HttpError(400, "A treatment id is required");

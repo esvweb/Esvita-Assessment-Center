@@ -1,5 +1,6 @@
 import { sql } from "./db";
 import type { TechnicalBank } from "./personas";
+import type { DoctorPlanItem } from "./upsell";
 
 /**
  * Patient cases, loaded from the database so HR can edit them without a deploy.
@@ -32,7 +33,16 @@ export interface PatientCase {
   extraPrompt: string | null;
   /** What the treating dentist prescribed after seeing the photos. */
   doctorIndication: string | null;
-  /** The package value of the doctor's plan, for the upsell comparison. */
+  /**
+   * The dentist's plan as price-list lines. Its value is worked out from the
+   * list wherever it is shown, so it follows a price change; see lib/upsell.
+   */
+  doctorPlanItems: DoctorPlanItem[];
+  /**
+   * The plan's value as last saved. Kept for cases with no plan lines, and as
+   * the figure list views show; where the price list is at hand it is
+   * recomputed from `doctorPlanItems` instead.
+   */
   doctorPlanValue: number | null;
   doctorPlanCurrency: string;
   voice: { voiceId: string; accent: string | null };
@@ -60,6 +70,7 @@ interface CaseRow {
   special_rule: string | null;
   extra_prompt: string | null;
   doctor_indication: string | null;
+  doctor_plan_items: DoctorPlanItem[] | null;
   doctor_plan_value: string | number | null;
   doctor_plan_currency: string;
   voice_id: string;
@@ -87,6 +98,10 @@ function toCase(row: CaseRow, photos: CasePhoto[]): PatientCase {
     specialRule: row.special_rule,
     extraPrompt: row.extra_prompt,
     doctorIndication: row.doctor_indication,
+    doctorPlanItems: (row.doctor_plan_items ?? []).map((i) => ({
+      treatment: String(i.treatment),
+      quantity: Number(i.quantity) || 0,
+    })),
     doctorPlanValue: row.doctor_plan_value == null ? null : Number(row.doctor_plan_value),
     doctorPlanCurrency: row.doctor_plan_currency ?? "EUR",
     voice: { voiceId: row.voice_id, accent: row.accent },
@@ -151,15 +166,16 @@ export async function createCase(
     insert into cases (
       assessment_id, name, age, country, headline, situation, personality, case_plan,
       hidden_signals, objection_chain, extra_questions, technical_banks,
-      special_rule, extra_prompt, doctor_indication, doctor_plan_value, doctor_plan_currency,
-      voice_id, accent, pickup_line, is_active, sort_order
+      special_rule, extra_prompt, doctor_indication, doctor_plan_items, doctor_plan_value,
+      doctor_plan_currency, voice_id, accent, pickup_line, is_active, sort_order
     ) values (
       ${assessmentId}, ${input.name ?? "New case"}, ${input.age ?? null}, ${input.country ?? null},
       ${input.headline ?? null}, ${input.situation ?? null}, ${input.personality ?? null},
       ${input.casePlan ?? null}, ${input.hiddenSignals ?? []}, ${input.objectionChain ?? []},
       ${input.extraQuestions ?? []}, ${input.technicalBanks ?? []},
       ${input.specialRule ?? null}, ${input.extraPrompt ?? null},
-      ${input.doctorIndication ?? null}, ${input.doctorPlanValue ?? null},
+      ${input.doctorIndication ?? null}, ${JSON.stringify(input.doctorPlanItems ?? [])}::jsonb,
+      ${input.doctorPlanValue ?? null},
       ${input.doctorPlanCurrency ?? "EUR"},
       ${input.voiceId ?? "matilda"}, ${input.accent ?? null},
       ${input.pickupLine ?? "Hello?"}, ${input.isActive ?? true}, ${input.sortOrder ?? 99}
@@ -179,6 +195,7 @@ export async function updateCase(id: number, input: CaseInput): Promise<PatientC
       extra_questions = ${v.extraQuestions}, technical_banks = ${v.technicalBanks},
       special_rule = ${v.specialRule}, extra_prompt = ${v.extraPrompt},
       doctor_indication = ${v.doctorIndication},
+      doctor_plan_items = ${JSON.stringify(v.doctorPlanItems ?? [])}::jsonb,
       doctor_plan_value = ${v.doctorPlanValue},
       doctor_plan_currency = ${v.doctorPlanCurrency},
       voice_id = ${input.voiceId ?? current.voice.voiceId},

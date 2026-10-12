@@ -1,5 +1,7 @@
 import { requirePermission } from "@/lib/permissions";
-import { deleteCase, getCase, updateCase } from "@/lib/cases";
+import { deleteCase, getCase, updateCase, type CaseInput } from "@/lib/cases";
+import { listTreatments } from "@/lib/treatments";
+import { priceDoctorPlan, type DoctorPlanItem } from "@/lib/upsell";
 import { sql } from "@/lib/db";
 import { errorResponse, HttpError } from "@/lib/session";
 
@@ -25,7 +27,29 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireLogin();
-    const updated = await updateCase(parseId((await params).id), await req.json());
+    const id = parseId((await params).id);
+    const input = (await req.json()) as CaseInput;
+
+    // The plan's value is priced here from the list, never taken from the
+    // browser: it is the baseline every candidate's upsell is measured against.
+    if (input.doctorPlanItems !== undefined) {
+      if (!Array.isArray(input.doctorPlanItems)) throw new HttpError(400, "Malformed doctor's plan");
+      const items: DoctorPlanItem[] = input.doctorPlanItems
+        .map((i) => ({ treatment: String(i?.treatment ?? "").trim(), quantity: Number(i?.quantity) }))
+        .filter((i) => i.treatment && Number.isFinite(i.quantity) && i.quantity > 0);
+
+      const existing = await getCase(id);
+      if (!existing) throw new HttpError(404, "Case not found");
+      const priced = priceDoctorPlan(items, await listTreatments(existing.assessmentId, true));
+
+      input.doctorPlanItems = items;
+      if (items.length) {
+        input.doctorPlanValue = priced.total;
+        input.doctorPlanCurrency = priced.currency;
+      }
+    }
+
+    const updated = await updateCase(id, input);
     if (!updated) throw new HttpError(404, "Case not found");
     return Response.json({ case: updated });
   } catch (err) {

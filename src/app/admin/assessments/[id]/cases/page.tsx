@@ -6,6 +6,7 @@ import { isSignedIn } from "@/lib/auth";
 import { loadBanks, loadObjections } from "@/lib/banks";
 import { listCases } from "@/lib/cases";
 import { myPermissions } from "@/lib/permissions";
+import { listTreatments } from "@/lib/treatments";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         initial={await listCases(id, true)}
         banks={await loadBanks(id)}
         objections={await loadObjections(id)}
+        catalogue={await listTreatments(id, true)}
         canDestroy={(await myPermissions())?.destroy ?? false}
       />
     </main>

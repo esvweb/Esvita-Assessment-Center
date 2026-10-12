@@ -144,14 +144,14 @@ export async function duplicateAssessment(
     insert into cases (
       assessment_id, name, age, country, headline, situation, personality, case_plan,
       hidden_signals, objection_chain, extra_questions, technical_banks,
-      special_rule, extra_prompt, doctor_indication, doctor_plan_value, doctor_plan_currency,
-      voice_id, accent, pickup_line, is_active, sort_order
+      special_rule, extra_prompt, doctor_indication, doctor_plan_items, doctor_plan_value,
+      doctor_plan_currency, voice_id, accent, pickup_line, is_active, sort_order
     )
     select
       ${copy.id}, name, age, country, headline, situation, personality, case_plan,
       hidden_signals, objection_chain, extra_questions, technical_banks,
-      special_rule, extra_prompt, doctor_indication, doctor_plan_value, doctor_plan_currency,
-      voice_id, accent, pickup_line, is_active, sort_order
+      special_rule, extra_prompt, doctor_indication, doctor_plan_items, doctor_plan_value,
+      doctor_plan_currency, voice_id, accent, pickup_line, is_active, sort_order
     from cases where assessment_id = ${sourceId}
     order by sort_order, id
     returning id, sort_order, name`) as { id: number; sort_order: number; name: string }[];
@@ -184,8 +184,8 @@ export async function duplicateAssessment(
   // The price list comes along, otherwise the copy has nothing for a candidate
   // to quote from and the plan stage is unusable until someone notices.
   await db`
-    insert into treatments (assessment_id, name, min_price, currency, unit, is_active, sort_order)
-    select ${copy.id}, name, min_price, currency, unit, is_active, sort_order
+    insert into treatments (assessment_id, name, min_price, currency, unit, category, is_active, sort_order)
+    select ${copy.id}, name, min_price, currency, unit, category, is_active, sort_order
     from treatments where assessment_id = ${sourceId}`;
 
   // Only blocks and banks the source actually overrode exist as rows; the rest

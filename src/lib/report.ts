@@ -1,9 +1,10 @@
 import { REPORT_MODEL, openai } from "./openai";
 import { briefToText, type BriefSection } from "./brief";
+import { objectionMap, type QuestionBank } from "./bank-types";
 import type { PatientCase } from "./cases";
-import { OBJECTION_BANK } from "./personas";
 import type { RubricVersion } from "./rubric";
 import type { AssessmentSession, TranscriptEntry } from "./types";
+import { analyseUpsell, upsellToText, type CatalogueEntry } from "./upsell";
 
 /**
  * Turns a finished session into the HR evaluation report.
@@ -83,11 +84,29 @@ export async function generateReport(
   brief: BriefSection[],
   rubric: RubricVersion,
   transcript: TranscriptEntry[],
-  briefShownToCandidate = true,
+  briefShownToCandidate: boolean,
+  /** The assessment's price list, which the upsell figures are worked out from. */
+  catalogue: CatalogueEntry[],
+  /** The assessment's own objection bank — the one the patient was actually given. */
+  objectionBank: QuestionBank,
 ): Promise<GeneratedReport> {
+  const bank = objectionMap(objectionBank);
   const objections = patient.objectionChain
-    .map((k, i) => `${i + 1}. ${k} — "${OBJECTION_BANK[k] ?? k}"`)
+    .map((k, i) => `${i + 1}. ${k} — "${bank[k] ?? k}"`)
     .join("\n");
+
+  // A case with plan lines gets the computed breakdown. An older case with only
+  // a hand-typed total falls back to comparing totals.
+  const upsell = patient.doctorPlanItems.length
+    ? upsellToText(analyseUpsell(patient.doctorPlanItems, session.plan, catalogue))
+    : `Doctor's plan value: ${
+        patient.doctorPlanValue != null
+          ? `${patient.doctorPlanValue} ${patient.doctorPlanCurrency}`
+          : "(not configured)"
+      }
+Candidate quoted: ${
+        session.plan ? `${session.plan.total_price} ${session.plan.currency}` : "(no plan was sent)"
+      }`;
 
   const system = `
 You are an assessor for the HR team at Esvita Clinic (dental treatments and hair transplantation, Istanbul). You are NOT roleplaying — the roleplay is over. You are grading a job candidate's performance in a simulated multi-stage sales session for the Senior Medical Advisor / Sales Consultant position.
@@ -103,26 +122,20 @@ Case plan the clinic had prepared: ${patient.casePlan}
 
 ## THE DENTIST'S INDICATION AND THE UPSELL COMPARISON
 
-This is what the treating dentist prescribed after reviewing the photos, and what that plan is worth. The candidate saw both while writing their own plan.
+This is what the treating dentist prescribed after reviewing the photos, and what that plan is worth at the clinic's list prices. The candidate saw the indication and its value while writing their own plan, and built their plan from the same price list.
 
 ${patient.doctorIndication ?? "(no indication was configured for this case)"}
 
-Doctor's plan value: ${
-    patient.doctorPlanValue != null
-      ? `${patient.doctorPlanValue} ${patient.doctorPlanCurrency}`
-      : "(not configured)"
-  }
-Candidate quoted: ${
-    session.plan ? `${session.plan.total_price} ${session.plan.currency}` : "(no plan was sent)"
-  }
+${upsell}
 
-Judge the gap in BOTH directions, and say plainly which it is:
-- **Value added** — the candidate proposed more than the minimum and the patient genuinely benefits (better implant brand, extra units for a symmetrical result, a treatment the patient asked for). Legitimate upsell. Note whether they explained the added value rather than just charging for it.
-- **Value left on the table** — the candidate quoted at or below the doctor's figure, discounted without being asked, or dropped items the indication called for.
-- **Overselling** — the candidate proposed treatment the dentist did NOT indicate, or inflated quantities without clinical grounds. This is a red flag regardless of the revenue, and must be called out as such.
+These figures are computed from the price list and are exact. Use them as given — do not recompute them, and do not contradict them. Your job is to judge what they mean, in BOTH directions:
+- **Priced above list** — the candidate charged more than the list price. Legitimate only if they justified it to the patient; note whether they did.
+- **Alternatives within a group** — a better implant brand, crown material or transplant technique than the dentist's baseline. This is the core legitimate upsell when the patient genuinely benefits and the candidate explained why. A lower-priced alternative is value left on the table unless the patient asked for it.
+- **Added beyond the indication** — treatment the dentist did not prescribe, or more units than indicated. This is overselling and a red flag regardless of the revenue, unless it is a comfort item the patient asked for — say which it is.
+- **Left out** — indicated treatment the candidate dropped: value left on the table, and possibly a clinically incomplete plan.
 - Where the indication contains a medical hold, selling past it is a serious failure no matter what the numbers say.
 
-State the doctor's figure, the candidate's figure, the difference in both absolute and percentage terms, and your verdict.
+State the dentist's figure, the candidate's figure and the difference in absolute and percentage terms (all given above), name the biggest driver of the difference, and give your verdict.
 ${patient.specialRule ? `Special measurement rule for this profile: ${patient.specialRule}` : ""}
 
 Hidden signals the patient was told to plant (check whether the candidate picked each one up):

@@ -2,10 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import ReportView from "@/components/ReportView";
 import TranscriptView from "@/components/TranscriptView";
+import UpsellView from "@/components/UpsellView";
 import { getAssessment } from "@/lib/assessments";
 import { isSignedIn } from "@/lib/auth";
 import { getCase } from "@/lib/cases";
 import { getSessionById, getTranscript, sql } from "@/lib/db";
+import { listTreatments } from "@/lib/treatments";
+import { analyseUpsell } from "@/lib/upsell";
 import { getCallArtifacts } from "@/lib/vapi";
 
 export const dynamic = "force-dynamic";
@@ -17,11 +20,18 @@ export default async function SessionDetail({ params }: { params: Promise<{ id: 
   const session = await getSessionById(id);
   if (!session) notFound();
 
-  const [patient, assessment, transcript] = await Promise.all([
+  const [patient, assessment, transcript, catalogue] = await Promise.all([
     getCase(session.profile_id),
     session.assessment_id ? getAssessment(session.assessment_id) : Promise.resolve(null),
     getTranscript(id),
+    session.assessment_id ? listTreatments(session.assessment_id, true) : Promise.resolve([]),
   ]);
+
+  // Only once there is something to compare: a case with plan lines, and a plan.
+  const upsell =
+    patient && patient.doctorPlanItems.length && session.plan
+      ? analyseUpsell(patient.doctorPlanItems, session.plan, catalogue)
+      : null;
 
   const reportRows = await sql()`
     select r.*, rv.version as rubric_version
@@ -107,6 +117,8 @@ export default async function SessionDetail({ params }: { params: Promise<{ id: 
           </p>
         </section>
       )}
+
+      {upsell && <UpsellView analysis={upsell} />}
 
       <TranscriptView
         transcript={transcript}

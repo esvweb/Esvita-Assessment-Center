@@ -5,6 +5,7 @@ import { getCase } from "@/lib/cases";
 import { defaultAssessment, getAssessment } from "@/lib/assessments";
 import { getSessionByToken, getTranscript } from "@/lib/db";
 import { listTreatments } from "@/lib/treatments";
+import { priceDoctorPlan } from "@/lib/upsell";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,15 @@ export default async function AssessmentPage({ params }: { params: Promise<{ tok
   const assessment = session.assessment_id
     ? await getAssessment(session.assessment_id)
     : await defaultAssessment();
-  const [patient, brief, transcript, treatments] = await Promise.all([
+  const [patient, brief, transcript, catalogue] = await Promise.all([
     getCase(session.profile_id),
     assessment ? listBrief(assessment.id) : Promise.resolve([]),
     getTranscript(session.id),
-    assessment ? listTreatments(assessment.id) : Promise.resolve([]),
+    // Hidden lines too, so a dentist's plan that uses one is still priced.
+    assessment ? listTreatments(assessment.id, true) : Promise.resolve([]),
   ]);
+  const doctorPlan =
+    patient && patient.doctorPlanItems.length ? priceDoctorPlan(patient.doctorPlanItems, catalogue) : null;
   const briefEnabled = assessment?.briefEnabled ?? true;
 
   const initialChat = transcript
@@ -44,11 +48,11 @@ export default async function AssessmentPage({ params }: { params: Promise<{ tok
         brief={briefEnabled ? brief : []}
         briefEnabled={briefEnabled}
         plan={session.plan}
-        treatments={treatments}
+        treatments={catalogue.filter((t) => t.isActive)}
         doctor={{
           text: patient?.doctorIndication ?? null,
-          value: patient?.doctorPlanValue ?? null,
-          currency: patient?.doctorPlanCurrency ?? "EUR",
+          value: doctorPlan?.total ?? patient?.doctorPlanValue ?? null,
+          currency: doctorPlan?.currency ?? patient?.doctorPlanCurrency ?? "EUR",
         }}
       />
     </main>

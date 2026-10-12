@@ -3,6 +3,8 @@ import { listBrief } from "@/lib/brief";
 import { getCase } from "@/lib/cases";
 import { generateReport } from "@/lib/report";
 import { getAssessment } from "@/lib/assessments";
+import { loadObjections } from "@/lib/banks";
+import { listTreatments } from "@/lib/treatments";
 import { activeRubric, DEFAULT_CRITERIA, DEFAULT_INSTRUCTIONS, saveRubric } from "@/lib/rubric";
 import { requirePermission } from "@/lib/permissions";
 import { assessmentIdFor, errorResponse, requireSession, HttpError } from "@/lib/session";
@@ -25,10 +27,13 @@ export async function POST(req: Request) {
       : await requireSession(token);
 
     const assessmentId = await assessmentIdFor(session);
-    const [patient, brief, transcript] = await Promise.all([
+    const [patient, brief, transcript, catalogue, objectionBank] = await Promise.all([
       getCase(session.profile_id),
       listBrief(assessmentId),
       getTranscript(session.id),
+      // Hidden lines included: a plan may quote one that was hidden afterwards.
+      listTreatments(assessmentId, true),
+      loadObjections(assessmentId),
     ]);
     if (!patient) throw new HttpError(400, "The case for this session has been deleted, so no report can be generated");
 
@@ -54,6 +59,8 @@ export async function POST(req: Request) {
       rubric,
       transcript,
       assessment?.briefEnabled ?? true,
+      catalogue,
+      objectionBank,
     );
 
     await sql()`

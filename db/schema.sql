@@ -315,3 +315,18 @@ create table if not exists treatments (
 );
 
 create index if not exists treatments_assessment_idx on treatments (assessment_id, sort_order);
+
+-- ---------------------------------------------------------------------------
+-- Structured dentist's plan and treatment groups (2026-10-12)
+--
+-- The dentist's plan becomes lines from the price list rather than prose and
+-- a hand-typed total, so its value follows the list and the upsell analysis
+-- can compare it with the candidate's plan line by line.
+-- ---------------------------------------------------------------------------
+
+-- Lines in one group are alternatives to each other (implant brands, crown
+-- materials); the upsell analysis compares by group. null = stands alone.
+alter table treatments add column if not exists category text;
+
+-- [{ "treatment": "<price list name>", "quantity": 4 }, ...]
+alter table cases add column if not exists doctor_plan_items jsonb not null default '[]'::jsonb;
