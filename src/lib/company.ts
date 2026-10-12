@@ -47,7 +47,7 @@ export const BRIEF: BriefSection[] = [
   },
   {
     title: "Price list (EUR)",
-    body: "List prices per unit, in EUR. The list price is the minimum that may be quoted; quoting above it is allowed. All-on implants are priced per implant with the multiunit included, and the prosthesis is priced per jaw. Hair transplant prices include the hotel nights shown. Simple extractions are free for implant patients; only surgical extraction is charged.",
+    body: "List prices per unit, in EUR. The list price is the minimum that may be quoted; quoting above it is allowed. All-on implants are priced per implant with the multiunit included, and the prosthesis is priced per jaw. Hair transplant prices include the hotel nights shown.",
     bullets: [
       "Diagnosis: Digital joint tomography €200 per scan · General anaesthesia €1,200 per session · Sedation €800 per session",
       "Surgery: Surgical extraction €150 per tooth · Bone grafting €200 per cc · Apical resection €250 per tooth · Gum grafting €375 per site · Sinus lifting, one side €500 per procedure · Sinus lifting, both sides €850 per procedure",
@@ -59,6 +59,15 @@ export const BRIEF: BriefSection[] = [
       "Fillings and endodontics: Composite filling €60 per tooth · Aesthetic filling €80 per tooth · Fiber post €80 per tooth · Root canal treatment (incl. composite filling) €125 per tooth",
       "Periodontology: Cleaning €60 per session · Curettage (full mouth) €150 per session · Gingivectomy, one jaw €160 per procedure · Gingivectomy, both jaws €240 per procedure",
       "Hair: PRP therapy €200 per session · Sapphire FUE hair transplant — incl. 2 nights' hotel €1,799 per procedure · DHI hair transplant, single session — incl. 2 nights' hotel €1,799 per procedure · DHI hair transplant, double session — incl. 3 nights' hotel €3,299 per procedure · Autologous micrograft treatment €1,399 per treatment · DHI + autologous micrograft package €3,199 per package · Eyebrow transplant €1,799 per procedure · Beard transplant €1,799 per procedure · Mesotherapy €300 per session · Post-op haircare vitamin set €450 per set",
+    ],
+  },
+  {
+    title: "Extractions",
+    body: "The clinic does not charge for a simple extraction when the tooth is coming out for implant treatment.",
+    bullets: [
+      "A simple extraction of a tooth that is being removed for an implant is free.",
+      "If that extraction has to be surgical, it is charged as a surgical extraction, per tooth, at the price-list rate.",
+      "Clearing an arch for All-on treatment counts as extraction for implants: simple extractions are free, surgical ones are charged.",
     ],
   },
   {
