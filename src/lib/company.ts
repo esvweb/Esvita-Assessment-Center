@@ -67,7 +67,7 @@ export const BRIEF: BriefSection[] = [
     bullets: [
       "A simple extraction of a tooth that is being removed for an implant is free.",
       "If that extraction has to be surgical, it is charged as a surgical extraction, per tooth, at the price-list rate.",
-      "Clearing an arch for All-on treatment counts as extraction for implants: simple extractions are free, surgical ones are charged.",
+      "All-on treatment clears the whole arch, so every simple extraction in an All-on arch is free — not only the teeth that receive an implant. Surgical extractions are still charged.",
     ],
   },
   {
